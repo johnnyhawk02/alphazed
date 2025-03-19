@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import '../services/audio_service.dart';
+import '../models/game_item.dart';
 
 class GameScreen extends StatefulWidget {
   @override
@@ -12,7 +12,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   final AudioService _audioService = AudioService();
-  List<String> images = [];
+  List<GameItem> gameItems = [];
   final List<String> allLetters = List.generate(26, (index) => String.fromCharCode(65 + index));
   int currentIndex = 0;
   int questionVariation = 1;
@@ -26,9 +26,9 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _loadImageList().then((_) {
-      if (images.isNotEmpty) {
-        images.shuffle(random);
+    _loadGameItems().then((_) {
+      if (gameItems.isNotEmpty) {
+        gameItems.shuffle(random);
         _playQuestionAndRevealLetters();
       }
     });
@@ -40,7 +40,7 @@ class _GameScreenState extends State<GameScreen> {
     super.dispose();
   }
 
-  Future<void> _loadImageList() async {
+  Future<void> _loadGameItems() async {
     try {
       // Get the manifest file which contains all the assets
       final manifestContent = await rootBundle.loadString('AssetManifest.json');
@@ -54,37 +54,42 @@ class _GameScreenState extends State<GameScreen> {
                           key.endsWith('.png')))
           .toList();
       
+      // Convert image paths to GameItem objects
+      List<GameItem> items = imageFiles.map((path) => GameItem.fromImagePath(path)).toList();
+      
       setState(() {
-        images = imageFiles;
+        gameItems = items;
       });
     } catch (e) {
-      print('Error loading image list: $e');
+      print('Error loading game items: $e');
       
       // Fallback to some default images if loading fails
+      final defaults = [
+        'assets/images/apple.jpeg',
+        'assets/images/ball.jpeg',
+        'assets/images/cat.jpeg',
+      ];
+      
       setState(() {
-        images = [
-          'assets/images/apple.jpeg',
-          'assets/images/ball.jpeg',
-          'assets/images/cat.jpeg',
-          // ...add a few more defaults
-        ];
+        gameItems = defaults.map((path) => GameItem.fromImagePath(path)).toList();
       });
     }
   }
 
   Future<void> _playQuestionAndRevealLetters() async {
+    if (gameItems.isEmpty) return;
+    
     setState(() {
       isQuestionPlaying = true;
       visibleLetterCount = 0;
       
-      // Generate new options for the current image
-      String correctWord = _getWordFromImage(images[currentIndex]);
-      currentOptions = _generateOptions(correctWord[0].toUpperCase());
+      // Generate new options for the current item
+      currentOptions = gameItems[currentIndex].generateOptions(allLetters);
     });
     
     try {
       // Play only the question audio first
-      String wordName = _getWordFromImage(images[currentIndex]);
+      String wordName = gameItems[currentIndex].word;
       
       // Start the question audio and wait for completion
       await _audioService.playQuestion(wordName, questionVariation);
@@ -99,44 +104,36 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
   
-  void _revealLettersSequentially() {
+  void _revealLettersSequentially() async {
     setState(() {
       isQuestionPlaying = false;
     });
-    
-    // Reveal each letter with a delay and play its sound
-    for (int i = 0; i < currentOptions.length; i++) {
-      Future.delayed(Duration(milliseconds: 800 * (i + 1)), () {
-        if (mounted) {
-          // Play the letter sound when revealing the letter
-          String letter = currentOptions[i];
-          
-          setState(() {
-            visibleLetterCount = i + 1;
-          });
-          
-          _audioService.playLetter(letter);
-        }
-      });
-    }
-  }
 
-  List<String> _generateOptions(String correctLetter) {
-    List<String> options = [correctLetter];
-    Random random = Random();
-    while (options.length < 3) {
-      String randomLetter = allLetters[random.nextInt(allLetters.length)];
-      if (!options.contains(randomLetter)) {
-        options.add(randomLetter);
+    // Reveal each letter with a 2-second delay and play its sound sequentially
+    for (int i = 0; i < currentOptions.length; i++) {
+      // Wait for 2 seconds before revealing the next letter
+      await Future.delayed(Duration(seconds: 2));
+
+      if (mounted) {
+        String letter = currentOptions[i];
+        String letterAudioPath = 'assets/audio/letters/${letter.toLowerCase()}.mp3';
+
+        setState(() {
+          visibleLetterCount = i + 1;
+        });
+
+        try {
+          await _audioService.playLetter(letter);
+        } catch (e) {
+          print('Error playing letter audio: $e');
+        }
       }
     }
-    options.shuffle();
-    return options;
   }
 
   void _nextImage() {
     setState(() {
-      currentIndex = (currentIndex + 1) % images.length;
+      currentIndex = (currentIndex + 1) % gameItems.length;
       questionVariation = random.nextInt(5) + 1; // Random question 1-5
     });
     
@@ -144,14 +141,17 @@ class _GameScreenState extends State<GameScreen> {
     _playQuestionAndRevealLetters();
   }
 
-  String _getWordFromImage(String imagePath) {
-    return path.basenameWithoutExtension(imagePath).toLowerCase();
-  }
-
   @override
   Widget build(BuildContext context) {
-    String currentImage = images.isEmpty ? '' : images[currentIndex];
-    String correctWord = currentImage.isEmpty ? '' : _getWordFromImage(currentImage);
+    // Guard against empty game items list
+    if (gameItems.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Alphabet Learning Game')),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    GameItem currentItem = gameItems[currentIndex];
     
     return Scaffold(
       appBar: AppBar(
@@ -163,54 +163,50 @@ class _GameScreenState extends State<GameScreen> {
           Expanded(
             flex: 3,
             child: Center(
-              child: currentImage.isEmpty
-                  ? CircularProgressIndicator() // Show loading indicator while images load
-                  : DragTarget<String>(
-                      onWillAccept: (data) {
-                        return data != null;
-                      },
-                      onAccept: (data) {
-                        if (data == correctWord[0].toUpperCase()) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Correct!')),
-                          );
-                          _nextImage();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Try Again!')),
-                          );
-                        }
-                      },
-                      builder: (context, candidateData, rejectedData) {
-                        return Card(
-                          elevation: 8,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+              child: DragTarget<String>(
+                onWillAccept: (data) => data != null,
+                onAccept: (data) {
+                  if (data == currentItem.firstLetter) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Correct!')),
+                    );
+                    _nextImage();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Try Again!')),
+                    );
+                  }
+                },
+                builder: (context, candidateData, rejectedData) {
+                  return Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            currentItem.imagePath,
+                            height: 300,
+                            fit: BoxFit.contain,
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Image.asset(
-                                  currentImage,
-                                  height: 300,
-                                  fit: BoxFit.contain,
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  correctWord,
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                          SizedBox(height: 16),
+                          Text(
+                            currentItem.word,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
+                  );
+                },
+              ),
             ),
           ),
           SizedBox(height: 20),
@@ -222,8 +218,8 @@ class _GameScreenState extends State<GameScreen> {
                 runSpacing: 30,
                 alignment: WrapAlignment.center,
                 children: List.generate(currentOptions.length, (index) {
+                  // Show empty space for letters not yet revealed
                   if (index >= visibleLetterCount && !isQuestionPlaying) {
-                    // Show empty space for letters not yet revealed
                     return SizedBox(width: 120, height: 120);
                   }
                   

@@ -7,7 +7,11 @@
 .buildlog/
 .history
 
+# Ignore service account key
+service-account-key.json
 
+# Ignore environment variables
+.env
 
 # Flutter repo-specific
 /bin/cache/

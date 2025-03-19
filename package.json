@@ -1,0 +1,30 @@
+{
+  "name": "alphazed",
+  "version": "1.0.0",
+  "description": "A new Flutter project.",
+  "main": "index.js",
+  "type": "module",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "generate-audio": "node scripts/generateAudio.js",
+    "convert-images": "node scripts/convertImages.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnnyhawk02/alphazed.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/johnnyhawk02/alphazed/issues"
+  },
+  "homepage": "https://github.com/johnnyhawk02/alphazed#readme",
+  "dependencies": {
+    "@google-cloud/text-to-speech": "^6.0.0",
+    "dotenv": "^16.4.7"
+  }
+}
