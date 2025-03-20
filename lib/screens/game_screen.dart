@@ -4,7 +4,6 @@ import '../models/game_state.dart';
 import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
 import '../config/game_config.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../services/audio_service.dart';
 
 class GameScreen extends StatefulWidget {
@@ -33,7 +32,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           appBar: AppBar(
             title: Text(
               'Alphabet Learning Game',
-              style: GoogleFonts.aBeeZee(fontWeight: FontWeight.bold),
+              style: GameConfig.titleTextStyle,
             ),
           ),
           body: Consumer2<GameState, AudioService>(
@@ -60,7 +59,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           flex: 3,
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: GameConfig.defaultPadding),
               child: buildImageDropTarget(gameState, audioService),
             ),
           ),
@@ -80,7 +79,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(GameConfig.defaultPadding),
             child: buildImageDropTarget(gameState, audioService),
           ),
         ),
@@ -105,7 +104,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           await audioService.playIncorrect();
           if (mounted && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Try Again!')),
+              SnackBar(
+                content: Text('Try Again!', style: GameConfig.bodyTextStyle),
+              ),
             );
           }
         }

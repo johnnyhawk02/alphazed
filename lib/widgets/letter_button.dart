@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../config/game_config.dart';
 
 class LetterButton extends StatelessWidget {
@@ -42,12 +41,10 @@ class LetterButton extends StatelessWidget {
       color: Colors.transparent,
       child: CircleAvatar(
         radius: GameConfig.letterButtonRadius,
-        backgroundColor: Colors.blue.shade100,
+        backgroundColor: GameConfig.primaryButtonColor,
         child: Text(
           letter.toLowerCase(),
-          style: GoogleFonts.aBeeZee(
-            fontSize: GameConfig.letterFontSize,
-            fontWeight: FontWeight.bold,
+          style: GameConfig.letterTextStyle.copyWith(
             color: isForFeedback ? Colors.blue : Colors.black,
           ),
         ),

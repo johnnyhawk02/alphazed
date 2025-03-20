@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'screens/game_screen.dart';
 import 'services/audio_service.dart';
 import 'models/game_state.dart';
+import 'config/game_config.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,12 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           visualDensity: VisualDensity.adaptivePlatformDensity,
           fontFamily: 'ABeeZee',
+          textTheme: TextTheme(
+            titleLarge: GameConfig.titleTextStyle,
+            titleMedium: GameConfig.wordTextStyle,
+            bodyLarge: GameConfig.bodyTextStyle,
+            bodyMedium: GameConfig.bodyTextStyle,
+          ),
         ),
         home: GameScreen(),
       ),

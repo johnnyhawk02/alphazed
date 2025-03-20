@@ -173,26 +173,26 @@ async function generateAllAudio() {
     // Generate supportive messages
     console.log("Generating supportive messages...");
     const supportiveMessages = [
-      "Sounds can be tricky.",
-      "Want to try again?",
-      "Maybe another letter?",
-      "Sounds can be silly.",
-      "Try a different one?",
-      "It's okay to keep looking.",
-      "No rush.",
-      "It's your choice.",
-      "Maybe try again?",
-      "It's okay.",
-      "Let's look again.",
-      "Want to see more?",
-      "What do you think?",
-      "You choose what's next.",
-      "Let's listen again.",
-      "You can decide.",
-      "Sounds can be funny.",
-      "Break time?",
-      "Take your time.",
-      "You're the boss."
+      "That's not quite right. Let's try again!",
+      "Almost there! Try once more.",
+      "You can do it! Try another letter.",
+      "Not that one, but you're learning!",
+      "Keep trying, you'll get it!",
+      "Let's have another go!",
+      "Don't give up, try again!",
+      "Not quite. Which letter do you think it is?",
+      "That's a good try! Let's try another letter.",
+      "You're getting closer! Try again.",
+      "Oops! Try a different letter.",
+      "That's not it, but you're doing great!",
+      "Practice makes perfect! Try again.",
+      "Everyone learns by trying. Let's try again!",
+      "That's tricky! Have another go.",
+      "You're being so brave trying! Let's try again.",
+      "Not that one. Can you find the right letter?",
+      "Keep going! You'll get it next time.",
+      "Learning takes practice. Try again!",
+      "I know you can do this! Try another letter."
     ];
     
     await processBatchAudio(supportDir, supportiveMessages, "support_");

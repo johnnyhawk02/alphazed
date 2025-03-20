@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/game_item.dart';
+import '../config/game_config.dart';
 
 class ImageDropTarget extends StatefulWidget {
   final GameItem item;
@@ -33,20 +33,13 @@ class _ImageDropTargetState extends State<ImageDropTarget> {
       },
       builder: (context, candidateData, rejectedData) {
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          decoration: BoxDecoration(
-            color: isHovering ? Colors.green.shade100 : Colors.white,
-            border: Border.all(
-              color: isHovering ? Colors.green : Colors.grey,
-              width: 2,
-            ),
-            borderRadius: BorderRadius.circular(16),
-          ),
+          duration: GameConfig.dropAnimationDuration,
+          decoration: GameConfig.getCardDecoration(isHighlighted: isHovering),
           child: Center(
             child: AspectRatio(
               aspectRatio: 4/3,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(GameConfig.defaultPadding),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -56,13 +49,10 @@ class _ImageDropTargetState extends State<ImageDropTarget> {
                         fit: BoxFit.contain,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: GameConfig.defaultPadding),
                     Text(
                       widget.item.word,
-                      style: GoogleFonts.aBeeZee(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: GameConfig.wordTextStyle,
                     ),
                   ],
                 ),
