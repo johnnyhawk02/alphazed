@@ -110,6 +110,34 @@ class AudioService {
     }
   }
   
+  Future<void> playIncorrect() async {
+    try {
+      // First play the wrong sound
+      await _genericPlayer.setAsset('assets/audio/other/wrong.mp3');
+      await _genericPlayer.play();
+      await _waitForCompletion(_genericPlayer);
+      
+      // Then play a random supportive message
+      final manifestContent = await rootBundle.loadString('AssetManifest.json');
+      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+      
+      final supportFiles = manifestMap.keys
+          .where((key) => key.startsWith('assets/audio/support/') && 
+                         key.endsWith('.mp3'))
+          .toList();
+
+      if (supportFiles.isNotEmpty) {
+        final random = Random();
+        final randomFile = supportFiles[random.nextInt(supportFiles.length)];
+        await _genericPlayer.setAsset(randomFile);
+        await _genericPlayer.play();
+        await _waitForCompletion(_genericPlayer);
+      }
+    } catch (e) {
+      print('Error playing incorrect audio: $e');
+    }
+  }
+  
   Future<void> _waitForCompletion(AudioPlayer player) async {
     try {
       await player.playerStateStream.firstWhere(
