@@ -77,7 +77,6 @@ class GameState extends ChangeNotifier {
   Future<void> revealLettersSequentially() async {
     isQuestionPlaying = false;
     notifyListeners();
-
     for (int i = 0; i < currentOptions.length; i++) {
       await Future.delayed(GameConfig.letterRevealDelay);
       String letter = currentOptions[i];
@@ -93,45 +92,16 @@ class GameState extends ChangeNotifier {
     }
   }
   
-  Future<void> _playCongratulatoryAudio() async {
-    try {
-      // Get the manifest file which contains all the assets
-      final manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-      
-      // Filter for congratulatory audio files
-      final congratsFiles = manifestMap.keys
-          .where((key) => key.startsWith('assets/audio/congrats/') && 
-                         key.endsWith('.mp3'))
-          .toList();
-
-      if (congratsFiles.isNotEmpty) {
-        final randomFile = congratsFiles[random.nextInt(congratsFiles.length)];
-        await audioService.playAudio(randomFile);
-      }
-      
-      // Play the 'correct.mp3' audio
-      await audioService.playAudio('assets/audio/other/correct.mp3');
-    } catch (e) {
-      print('Error playing congratulatory audio: $e');
-    }
-  }
-
   Future<void> nextImage() async {
-    // Play congratulatory audio before proceeding to the next turn
-    await _playCongratulatoryAudio();
-
     currentIndex = (currentIndex + 1) % gameItems.length;
     questionVariation = random.nextInt(GameConfig.maxQuestionVariations) + 1;
     visibleLetterCount = 0;
     notifyListeners();
-
     await playQuestionAndRevealLetters();
   }
   
   @override
   void dispose() {
-    audioService.dispose();
     super.dispose();
   }
 }
