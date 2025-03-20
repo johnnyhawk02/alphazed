@@ -22,8 +22,8 @@ class GameItem {
     final filename = imagePath.split('/').last;
     final word = filename.split('.').first.toLowerCase();
     
-    // Get the first letter (uppercase)
-    final firstLetter = word.isNotEmpty ? word[0].toUpperCase() : '';
+    // Get the first letter (lowercase)
+    final firstLetter = word.isNotEmpty ? word[0].toLowerCase() : '';
     
     return GameItem(
       imagePath: imagePath,

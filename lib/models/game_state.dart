@@ -8,7 +8,7 @@ import '../config/game_config.dart';
 class GameState extends ChangeNotifier {
   final AudioService audioService;
   List<GameItem> gameItems = [];
-  final List<String> allLetters = List.generate(26, (index) => String.fromCharCode(65 + index));
+  final List<String> allLetters = List.generate(26, (index) => String.fromCharCode(97 + index)); // Changed from 65 to 97 for lowercase
   int currentIndex = 0;
   int questionVariation = 1;
   final Random random = Random();

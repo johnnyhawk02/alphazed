@@ -96,7 +96,7 @@ class _LetterButtonState extends State<LetterButton> with SingleTickerProviderSt
         decoration: GameConfig.getLetterButtonDecoration(isActive: !_isDragging || isForFeedback),
         child: Center(
           child: Text(
-            widget.letter.toUpperCase(),
+            widget.letter.toLowerCase(),
             style: GameConfig.letterTextStyle,
           ),
         ),
