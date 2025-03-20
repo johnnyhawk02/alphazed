@@ -22,6 +22,7 @@ class _GameScreenState extends State<GameScreen> {
   bool isQuestionPlaying = false;
   int visibleLetterCount = 0;
   List<String> currentOptions = [];
+  bool isHovering = false;
   
   @override
   void initState() {
@@ -164,8 +165,26 @@ class _GameScreenState extends State<GameScreen> {
             flex: 3,
             child: Center(
               child: DragTarget<String>(
-                onWillAccept: (data) => data != null,
+                onWillAccept: (data) {
+                  setState(() {
+                    isHovering = true;
+                  });
+                  return data != null;
+                },
+                onLeave: (data) {
+                  setState(() {
+                    isHovering = false;
+                  });
+                },
                 onAccept: (data) {
+                  setState(() {
+                    isHovering = false;
+                    if (data == currentItem.firstLetter) {
+                      visibleLetterCount = 0; // Hide all buttons
+                      isQuestionPlaying = true; // Prevent revealing letters until the next question is asked
+                    }
+                  });
+
                   if (data == currentItem.firstLetter) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Correct!')),
@@ -178,9 +197,14 @@ class _GameScreenState extends State<GameScreen> {
                   }
                 },
                 builder: (context, candidateData, rejectedData) {
-                  return Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
+                  return AnimatedContainer(
+                    duration: Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      color: isHovering ? Colors.green.shade100 : Colors.white,
+                      border: Border.all(
+                        color: isHovering ? Colors.green : Colors.grey,
+                        width: 2,
+                      ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Padding(
@@ -218,15 +242,12 @@ class _GameScreenState extends State<GameScreen> {
                 runSpacing: 30,
                 alignment: WrapAlignment.center,
                 children: List.generate(currentOptions.length, (index) {
-                  // Show empty space for letters not yet revealed
-                  if (index >= visibleLetterCount && !isQuestionPlaying) {
-                    return SizedBox(width: 120, height: 120);
-                  }
-                  
                   String letter = currentOptions[index];
                   
-                  // Show letter circle only if it's visible (revealed)
-                  if (index < visibleLetterCount || isQuestionPlaying) {
+                  // Only show letters if they've been revealed and we're not in the transition state after a correct answer
+                  bool shouldShowLetter = index < visibleLetterCount && !isQuestionPlaying;
+                  
+                  if (shouldShowLetter) {
                     return Draggable<String>(
                       data: letter,
                       feedback: Material(
