@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:lottie/lottie.dart';
 import '../models/game_state.dart';
 import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
@@ -11,32 +12,44 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  late AnimationController _lottieController;
   bool _showCelebration = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     _controller = AnimationController(
       duration: GameConfig.fadeAnimationDuration,
       vsync: this,
     );
-    
+
     _scaleAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
     );
-    
+
+    _lottieController = AnimationController(vsync: this);
+
     _controller.forward();
   }
 
   @override
   void dispose() {
+    if (_controller.isAnimating) {
+      _controller.stop();
+    }
     _controller.dispose();
+
+    if (_lottieController.isAnimating) {
+      _lottieController.stop();
+    }
+    _lottieController.dispose();
+
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -45,42 +58,63 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Si
   Widget build(BuildContext context) {
     return OrientationBuilder(
       builder: (context, orientation) {
-        return Scaffold(
-          appBar: AppBar(
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            centerTitle: true,
-            title: Text(
-              'Alphabet Learning Game',
-              style: GameConfig.titleTextStyle,
-            ),
-          ),
-          backgroundColor: Colors.transparent,
-          body: Consumer2<GameState, AudioService>(
-            builder: (context, gameState, audioService, _) {
-              if (gameState.currentItem == null) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(GameConfig.primaryButtonColor),
-                  ),
-                );
-              }
-              return SafeArea(
-                child: FadeTransition(
-                  opacity: _scaleAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: GameConfig.defaultPadding),
-                      child: orientation == Orientation.portrait 
-                        ? buildPortraitLayout(gameState, audioService)
-                        : buildLandscapeLayout(gameState, audioService),
-                    ),
-                  ),
+        return Stack(
+          children: [
+            Scaffold(
+              appBar: AppBar(
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                centerTitle: true,
+                title: Text(
+                  'Alphabet Learning Game',
+                  style: GameConfig.titleTextStyle,
                 ),
-              );
-            },
-          ),
+              ),
+              backgroundColor: Colors.transparent,
+              body: Consumer2<GameState, AudioService>(
+                builder: (context, gameState, audioService, _) {
+                  if (gameState.currentItem == null) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(GameConfig.primaryButtonColor),
+                      ),
+                    );
+                  }
+                  return SafeArea(
+                    child: FadeTransition(
+                      opacity: _scaleAnimation,
+                      child: ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: GameConfig.defaultPadding),
+                          child: orientation == Orientation.portrait 
+                            ? buildPortraitLayout(gameState, audioService)
+                            : buildLandscapeLayout(gameState, audioService),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (_showCelebration)
+              Positioned.fill(
+                child: Lottie.asset(
+                  'assets/animations/anim1.json',
+                  controller: _lottieController,
+                  onLoaded: (composition) {
+                    _lottieController.duration = composition.duration;
+                    _lottieController.forward().whenComplete(() {
+                      if (mounted) {
+                        _hideCelebrationAnimation();
+                      }
+                    });
+                  },
+                  repeat: false,
+                  fit: BoxFit.cover,
+                ),
+              ),
+          ],
         );
       }
     );
@@ -207,5 +241,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Si
         ),
       ),
     );
+  }
+
+  void _playCelebrationAnimation() {
+    setState(() {
+      _showCelebration = true;
+    });
+
+    _lottieController.reset();
+    _lottieController.forward().whenComplete(() {
+      if (mounted) {
+        _hideCelebrationAnimation();
+      }
+    });
+  }
+
+  void _hideCelebrationAnimation() {
+    setState(() {
+      _showCelebration = false;
+    });
   }
 }
