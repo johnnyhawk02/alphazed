@@ -20,7 +20,9 @@ class GameState extends ChangeNotifier {
   
   GameItem? get currentItem => gameItems.isEmpty ? null : gameItems[currentIndex];
   
-  GameState({required this.audioService});
+  GameState({required this.audioService}) {
+    audioService.onCongratsStart = hideLetters;
+  }
   
   // Shared utility method for asset loading with filtering
   Future<List<String>> _getAssetsWithFilters(String directory, List<String> extensions) async {
@@ -100,6 +102,11 @@ class GameState extends ChangeNotifier {
     }
   }
   
+  void hideLetters() {
+    visibleLetterCount = 0;
+    notifyListeners();
+  }
+  
   Future<void> nextImage() async {
     currentIndex = (currentIndex + 1) % gameItems.length;
     questionVariation = random.nextInt(GameConfig.maxQuestionVariations) + 1;
@@ -110,6 +117,7 @@ class GameState extends ChangeNotifier {
   
   @override
   void dispose() {
+    audioService.onCongratsStart = null;
     super.dispose();
   }
 }

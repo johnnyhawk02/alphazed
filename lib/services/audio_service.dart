@@ -3,12 +3,16 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:math';
 
+typedef VoidCallback = void Function();
+
 class AudioService {
   final AudioPlayer _wordPlayer = AudioPlayer();
   final AudioPlayer _questionPlayer = AudioPlayer();
   final AudioPlayer _letterPlayer = AudioPlayer();
   final AudioPlayer _congratsPlayer = AudioPlayer();
   final AudioPlayer _genericPlayer = AudioPlayer();
+  
+  VoidCallback? onCongratsStart;
   
   AudioService() {
     // Initialize audio players with default volume
@@ -116,7 +120,19 @@ class AudioService {
   Future<void> playCongratulations() async {
     await _safeAudioOperation('playCongratulations', () async {
       // Play random congratulatory message
-      await _playRandomAudioFromDirectory('audio/congrats', _congratsPlayer);
+      final audioFiles = await _getAssetsWithPattern('audio/congrats', '.mp3');
+      
+      if (audioFiles.isNotEmpty) {
+        final random = Random();
+        final randomFile = audioFiles[random.nextInt(audioFiles.length)];
+        await _congratsPlayer.setAsset(randomFile);
+        
+        // Notify that congrats is about to start
+        onCongratsStart?.call();
+        
+        await _congratsPlayer.play();
+        await _waitForCompletion(_congratsPlayer);
+      }
       
       // After congrats finishes, play correct.mp3
       await _congratsPlayer.setAsset('assets/audio/other/correct.mp3');

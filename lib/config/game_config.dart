@@ -3,13 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 class GameConfig {
   // Animation durations
-  static const Duration letterRevealDelay = Duration(seconds: 1);
+  static const Duration letterRevealDelay = Duration(milliseconds: 1500);
   static const Duration dropAnimationDuration = Duration(milliseconds: 300);
   static const Duration fadeAnimationDuration = Duration(milliseconds: 500);
   
   // Size constants
-  static const double letterButtonSize = 240.0;
-  static const double letterButtonRadius = 120.0;
+  static const double letterButtonSize = 200.0;
+  static const double letterButtonRadius = 100.0;
   static const double imageHeight = 300.0;
   static const double letterSpacing = 30.0;
   static const double defaultPadding = 16.0;
