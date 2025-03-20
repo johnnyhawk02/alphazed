@@ -11,15 +11,31 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    _controller = AnimationController(
+      duration: GameConfig.fadeAnimationDuration,
+      vsync: this,
+    );
+    
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    
+    _controller.forward();
   }
 
   @override
   void dispose() {
+    _controller.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -30,19 +46,37 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       builder: (context, orientation) {
         return Scaffold(
           appBar: AppBar(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            centerTitle: true,
             title: Text(
               'Alphabet Learning Game',
               style: GameConfig.titleTextStyle,
             ),
           ),
+          backgroundColor: Colors.transparent,
           body: Consumer2<GameState, AudioService>(
             builder: (context, gameState, audioService, _) {
               if (gameState.currentItem == null) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(GameConfig.primaryButtonColor),
+                  ),
+                );
               }
-
               return SafeArea(
-                child: orientation == Orientation.portrait ? buildPortraitLayout(gameState, audioService) : buildLandscapeLayout(gameState, audioService),
+                child: FadeTransition(
+                  opacity: _scaleAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: GameConfig.defaultPadding),
+                      child: orientation == Orientation.portrait 
+                        ? buildPortraitLayout(gameState, audioService)
+                        : buildLandscapeLayout(gameState, audioService),
+                    ),
+                  ),
+                ),
               );
             },
           ),
@@ -58,18 +92,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         Expanded(
           flex: 3,
           child: Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: GameConfig.defaultPadding),
-              child: buildImageDropTarget(gameState, audioService),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
+                child: buildImageDropTarget(gameState, audioService),
+              ),
             ),
           ),
         ),
-        SizedBox(height: GameConfig.letterSpacing),
+        SizedBox(height: GameConfig.letterSpacing * 1.5),
         Expanded(
           flex: 2,
           child: buildLetterGrid(gameState, audioService),
         ),
-        SizedBox(height: GameConfig.letterSpacing / 2),
+        SizedBox(height: GameConfig.letterSpacing),
       ],
     );
   }
@@ -78,11 +124,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return Row(
       children: [
         Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(GameConfig.defaultPadding),
-            child: buildImageDropTarget(gameState, audioService),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
+              child: buildImageDropTarget(gameState, audioService),
+            ),
           ),
         ),
+        SizedBox(width: GameConfig.letterSpacing),
         Expanded(
           child: buildLetterGrid(gameState, audioService),
         ),
@@ -91,26 +150,37 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Widget buildImageDropTarget(GameState gameState, AudioService audioService) {
-    return ImageDropTarget(
-      key: ValueKey(gameState.currentItem!.imagePath),
-      item: gameState.currentItem!,
-      onLetterAccepted: (letter) async {
-        if (letter == gameState.currentItem!.firstLetter) {
-          await audioService.playCongratulations();
-          if (mounted && context.mounted) {
-            gameState.nextImage();
+    return Hero(
+      tag: 'game_image_${gameState.currentItem!.imagePath}',
+      child: ImageDropTarget(
+        key: ValueKey(gameState.currentItem!.imagePath),
+        item: gameState.currentItem!,
+        onLetterAccepted: (letter) async {
+          if (letter == gameState.currentItem!.firstLetter) {
+            await audioService.playCongratulations();
+            if (mounted && context.mounted) {
+              _controller.reverse().then((_) {
+                gameState.nextImage();
+                _controller.forward();
+              });
+            }
+          } else {
+            await audioService.playIncorrect();
+            if (mounted && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Try Again!', style: GameConfig.bodyTextStyle.copyWith(color: Colors.white)),
+                  backgroundColor: GameConfig.secondaryButtonColor.withOpacity(0.9),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius),
+                  ),
+                ),
+              );
+            }
           }
-        } else {
-          await audioService.playIncorrect();
-          if (mounted && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Try Again!', style: GameConfig.bodyTextStyle),
-              ),
-            );
-          }
-        }
-      },
+        },
+      ),
     );
   }
 
@@ -122,14 +192,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         alignment: WrapAlignment.center,
         children: List.generate(
           gameState.currentOptions.length,
-          (index) => LetterButton(
-            key: ValueKey('letter_${gameState.currentOptions[index]}_$index'),
-            letter: gameState.currentOptions[index],
-            onTap: () => audioService.playLetter(
-              gameState.currentOptions[index],
+          (index) => AnimatedOpacity(
+            duration: GameConfig.fadeAnimationDuration,
+            opacity: index < gameState.visibleLetterCount && !gameState.isQuestionPlaying ? 1.0 : 0.0,
+            child: LetterButton(
+              key: ValueKey('letter_${gameState.currentOptions[index]}_$index'),
+              letter: gameState.currentOptions[index],
+              onTap: () => audioService.playLetter(gameState.currentOptions[index]),
+              visible: index < gameState.visibleLetterCount && !gameState.isQuestionPlaying,
             ),
-            visible: index < gameState.visibleLetterCount &&
-                !gameState.isQuestionPlaying,
           ),
         ),
       ),

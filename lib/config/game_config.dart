@@ -23,41 +23,112 @@ class GameConfig {
   static const double bodyTextFontSize = 18.0;
   
   // Colors
-  static final Color primaryButtonColor = Colors.blue.shade100;
-  static final Color highlightColor = Colors.green.shade100;
-  static final Color defaultBackgroundColor = Colors.white;
-  static final Color highlightBorderColor = Colors.green;
-  static final Color defaultBorderColor = Colors.grey;
+  static final Color primaryButtonColor = Color(0xFF4CC9F0);  // Bright blue
+  static final Color secondaryButtonColor = Color(0xFF7209B7); // Deep purple
+  static final Color highlightColor = Color(0xFF4DE1C1);  // Turquoise
+  static final Color defaultBackgroundColor = Color(0xFFF8F9FA); // Light gray
+  static final Color highlightBorderColor = Color(0xFF06D6A0); // Mint
+  static final Color defaultBorderColor = Color(0xFFDEE2E6); // Light gray
+  static final Color textColor = Color(0xFF2B2D42); // Dark blue-gray
+  
+  static final LinearGradient backgroundGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF8F9FA),
+      Color(0xFFE9ECEF),
+    ],
+  );
+  
+  static final LinearGradient letterButtonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      primaryButtonColor,
+      primaryButtonColor.withOpacity(0.8),
+    ],
+  );
   
   // Text styles
-  static TextStyle get letterTextStyle => GoogleFonts.aBeeZee(
+  static TextStyle get letterTextStyle => GoogleFonts.fredoka(
     fontSize: letterFontSize,
     fontWeight: FontWeight.bold,
+    color: Colors.white,
+    shadows: [
+      Shadow(
+        offset: Offset(2.0, 2.0),
+        blurRadius: 3.0,
+        color: Colors.black26,
+      ),
+    ],
   );
   
-  static TextStyle get wordTextStyle => GoogleFonts.aBeeZee(
+  static TextStyle get wordTextStyle => GoogleFonts.fredoka(
     fontSize: wordFontSize,
     fontWeight: FontWeight.bold,
+    color: textColor,
   );
   
-  static TextStyle get titleTextStyle => GoogleFonts.aBeeZee(
+  static TextStyle get titleTextStyle => GoogleFonts.fredoka(
     fontSize: titleFontSize,
     fontWeight: FontWeight.bold,
+    color: textColor,
   );
   
-  static TextStyle get bodyTextStyle => GoogleFonts.aBeeZee(
+  static TextStyle get bodyTextStyle => GoogleFonts.fredoka(
     fontSize: bodyTextFontSize,
+    color: textColor,
   );
   
   // Common box decorations
   static BoxDecoration getCardDecoration({bool isHighlighted = false}) {
     return BoxDecoration(
-      color: isHighlighted ? highlightColor : defaultBackgroundColor,
+      gradient: isHighlighted ? 
+        LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            highlightColor,
+            highlightColor.withOpacity(0.8),
+          ],
+        ) : 
+        LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            defaultBackgroundColor,
+            defaultBackgroundColor.withOpacity(0.9),
+          ],
+        ),
+      borderRadius: BorderRadius.circular(defaultBorderRadius),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 10,
+          offset: Offset(0, 4),
+        ),
+      ],
       border: Border.all(
         color: isHighlighted ? highlightBorderColor : defaultBorderColor,
         width: 2,
       ),
-      borderRadius: BorderRadius.circular(defaultBorderRadius),
+    );
+  }
+  
+  static BoxDecoration getLetterButtonDecoration({bool isActive = true}) {
+    return BoxDecoration(
+      gradient: isActive ? letterButtonGradient : null,
+      color: isActive ? null : Colors.grey.shade300,
+      borderRadius: BorderRadius.circular(letterButtonRadius),
+      boxShadow: isActive ? [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          spreadRadius: 0,
+          blurRadius: 8,
+          offset: Offset(0, 4),
+        ),
+      ] : null,
     );
   }
 }
