@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:lottie/lottie.dart';
-import 'dart:math';
 import '../models/game_state.dart';
 import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
@@ -43,20 +41,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Si
     super.dispose();
   }
 
-  void _playCelebrationAnimation() {
-    setState(() {
-      _showCelebration = true;
-    });
-    
-    Future.delayed(Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _showCelebration = false;
-        });
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return OrientationBuilder(
@@ -72,58 +56,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Si
             ),
           ),
           backgroundColor: Colors.transparent,
-          body: Stack(
-            children: [
-              Consumer2<GameState, AudioService>(
-                builder: (context, gameState, audioService, _) {
-                  if (gameState.currentItem == null) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(GameConfig.primaryButtonColor),
-                      ),
-                    );
-                  }
-                  return SafeArea(
-                    child: FadeTransition(
-                      opacity: _scaleAnimation,
-                      child: ScaleTransition(
-                        scale: _scaleAnimation,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: GameConfig.defaultPadding),
-                          child: orientation == Orientation.portrait 
-                            ? buildPortraitLayout(gameState, audioService)
-                            : buildLandscapeLayout(gameState, audioService),
-                        ),
-                      ),
+          body: Consumer2<GameState, AudioService>(
+            builder: (context, gameState, audioService, _) {
+              if (gameState.currentItem == null) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(GameConfig.primaryButtonColor),
+                  ),
+                );
+              }
+              return SafeArea(
+                child: FadeTransition(
+                  opacity: _scaleAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: GameConfig.defaultPadding),
+                      child: orientation == Orientation.portrait 
+                        ? buildPortraitLayout(gameState, audioService)
+                        : buildLandscapeLayout(gameState, audioService),
                     ),
-                  );
-                },
-              ),
-              
-              // Celebration animation overlay
-              if (_showCelebration)
-                Positioned.fill(
-                  child: Stack(
-                    children: [
-                      // Semi-transparent background overlay
-                      Container(
-                        color: Colors.black.withOpacity(0.2),
-                      ),
-                      // Celebration animation
-                      Center(
-                        child: Lottie.asset(
-                          'assets/animations/stars_celebration.json',
-                          width: MediaQuery.of(context).size.width * 0.9,
-                          height: MediaQuery.of(context).size.height * 0.9,
-                          fit: BoxFit.contain,
-                          repeat: true,
-                          animate: true,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-            ],
+              );
+            },
           ),
         );
       }
