@@ -1,25 +1,37 @@
 import 'package:flutter/material.dart';
-import 'screens/welcome_screen.dart';
+import 'package:provider/provider.dart';
 import 'screens/game_screen.dart';
+import 'services/audio_service.dart';
+import 'models/game_state.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  final AudioService audioService = AudioService();
+  
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Alphabet Learning Game',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+    return MultiProvider(
+      providers: [
+        Provider<AudioService>.value(
+          value: audioService,
+        ),
+        ChangeNotifierProvider<GameState>(
+          create: (_) => GameState(audioService: audioService)..loadGameItems(),
+        ),
+      ],
+      child: MaterialApp(
+        title: 'Alphabet Learning Game',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+          fontFamily: 'ABeeZee',
+        ),
+        home: GameScreen(),
       ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => WelcomeScreen(),
-        '/game': (context) => GameScreen(),
-      },
     );
   }
 }
