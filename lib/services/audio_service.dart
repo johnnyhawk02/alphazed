@@ -27,18 +27,58 @@ class AudioService {
     _genericPlayer.dispose();
   }
   
-  Future<void> playWord(String word) async {
+  // Shared utility method for asset loading
+  Future<List<String>> _getAssetsWithPattern(String directory, String extension) async {
     try {
-      String audioPath = 'assets/audio/words/${word.toLowerCase()}.mp3';
-      await _wordPlayer.setAsset(audioPath);
-      await _wordPlayer.play();
+      final manifestContent = await rootBundle.loadString('AssetManifest.json');
+      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+      
+      return manifestMap.keys
+          .where((key) => key.startsWith('assets/$directory/') && 
+                         key.endsWith(extension))
+          .toList();
     } catch (e) {
-      print('Error playing word audio: $e');
+      print('Error loading assets from $directory: $e');
+      return [];
     }
   }
   
-  Future<void> playQuestion(String word, int questionVariation) async {
+  // Shared method for playing random audio from a directory
+  Future<void> _playRandomAudioFromDirectory(String directory, AudioPlayer player) async {
     try {
+      final audioFiles = await _getAssetsWithPattern(directory, '.mp3');
+      
+      if (audioFiles.isNotEmpty) {
+        final random = Random();
+        final randomFile = audioFiles[random.nextInt(audioFiles.length)];
+        await player.setAsset(randomFile);
+        await player.play();
+        await _waitForCompletion(player);
+      }
+    } catch (e) {
+      print('Error playing random audio from $directory: $e');
+    }
+  }
+  
+  // Generic method to safely execute audio operations
+  Future<void> _safeAudioOperation(String operationName, Future<void> Function() operation) async {
+    try {
+      await operation();
+    } catch (e) {
+      print('Error during $operationName: $e');
+    }
+  }
+  
+  Future<void> playWord(String word) async {
+    await _safeAudioOperation('playWord', () async {
+      String audioPath = 'assets/audio/words/${word.toLowerCase()}.mp3';
+      await _wordPlayer.setAsset(audioPath);
+      await _wordPlayer.play();
+    });
+  }
+  
+  Future<void> playQuestion(String word, int questionVariation) async {
+    await _safeAudioOperation('playQuestion', () async {
       // Try to play specific question for this word
       String questionAudioPath = 'assets/audio/questions/${word.toLowerCase()}_question_$questionVariation.mp3';
       
@@ -46,96 +86,55 @@ class AudioService {
         await rootBundle.load(questionAudioPath);
         await _questionPlayer.setAsset(questionAudioPath);
         await _questionPlayer.play();
-        
-        // Return the player for the caller to wait for completion if needed
-        return;
       } catch (e) {
         // If specific question not found, play general question
         String generalQuestionPath = 'assets/audio/questions/_question_$questionVariation.mp3';
         await _questionPlayer.setAsset(generalQuestionPath);
         await _questionPlayer.play();
       }
-    } catch (e) {
-      print('Error playing question audio: $e');
-    }
+    });
   }
   
   Future<void> playLetter(String letter) async {
-    try {
+    await _safeAudioOperation('playLetter', () async {
       String audioPath = 'assets/audio/letters/${letter.toLowerCase()}.mp3';
       await rootBundle.load(audioPath); // Check if audio exists
       await _letterPlayer.setAsset(audioPath);
       await _letterPlayer.play();
-    } catch (e) {
-      print('Error playing letter audio: $e');
-    }
+    });
   }
 
   Future<void> playAudio(String audioPath) async {
-    try {
+    await _safeAudioOperation('playAudio', () async {
       await rootBundle.load(audioPath); // Check if audio exists
       await _genericPlayer.setAsset(audioPath);
       await _genericPlayer.play();
       await _waitForCompletion(_genericPlayer);
-    } catch (e) {
-      print('Error playing audio: $e');
-    }
+    });
   }
 
   Future<void> playCongratulations() async {
-    try {
-      final manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+    await _safeAudioOperation('playCongratulations', () async {
+      // Play random congratulatory message
+      await _playRandomAudioFromDirectory('audio/congrats', _congratsPlayer);
       
-      // Filter for congratulatory audio files
-      final congratsFiles = manifestMap.keys
-          .where((key) => key.startsWith('assets/audio/congrats/') && 
-                         key.endsWith('.mp3'))
-          .toList();
-
-      if (congratsFiles.isNotEmpty) {
-        final random = Random();
-        final randomFile = congratsFiles[random.nextInt(congratsFiles.length)];
-        await _congratsPlayer.setAsset(randomFile);
-        await _congratsPlayer.play();
-        await _waitForCompletion(_congratsPlayer);
-        
-        // After congrats finishes, play correct.mp3
-        await _congratsPlayer.setAsset('assets/audio/other/correct.mp3');
-        await _congratsPlayer.play();
-        await _waitForCompletion(_congratsPlayer);
-      }
-    } catch (e) {
-      print('Error playing congratulatory audio: $e');
-    }
+      // After congrats finishes, play correct.mp3
+      await _congratsPlayer.setAsset('assets/audio/other/correct.mp3');
+      await _congratsPlayer.play();
+      await _waitForCompletion(_congratsPlayer);
+    });
   }
   
   Future<void> playIncorrect() async {
-    try {
+    await _safeAudioOperation('playIncorrect', () async {
       // First play the wrong sound
       await _genericPlayer.setAsset('assets/audio/other/wrong.mp3');
       await _genericPlayer.play();
       await _waitForCompletion(_genericPlayer);
       
       // Then play a random supportive message
-      final manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-      
-      final supportFiles = manifestMap.keys
-          .where((key) => key.startsWith('assets/audio/support/') && 
-                         key.endsWith('.mp3'))
-          .toList();
-
-      if (supportFiles.isNotEmpty) {
-        final random = Random();
-        final randomFile = supportFiles[random.nextInt(supportFiles.length)];
-        await _genericPlayer.setAsset(randomFile);
-        await _genericPlayer.play();
-        await _waitForCompletion(_genericPlayer);
-      }
-    } catch (e) {
-      print('Error playing incorrect audio: $e');
-    }
+      await _playRandomAudioFromDirectory('audio/support', _genericPlayer);
+    });
   }
   
   Future<void> _waitForCompletion(AudioPlayer player) async {

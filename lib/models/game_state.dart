@@ -22,17 +22,30 @@ class GameState extends ChangeNotifier {
   
   GameState({required this.audioService});
   
-  Future<void> loadGameItems() async {
+  // Shared utility method for asset loading with filtering
+  Future<List<String>> _getAssetsWithFilters(String directory, List<String> extensions) async {
     try {
       final manifestContent = await rootBundle.loadString('AssetManifest.json');
       final Map<String, dynamic> manifestMap = json.decode(manifestContent);
       
-      final imageFiles = manifestMap.keys
-          .where((key) => key.startsWith('assets/images/') && 
-                         (key.endsWith('.jpeg') || 
-                          key.endsWith('.jpg') || 
-                          key.endsWith('.png')))
+      return manifestMap.keys
+          .where((key) => key.startsWith('assets/$directory/') && 
+                         extensions.any((ext) => key.endsWith(ext)))
           .toList();
+    } catch (e) {
+      print('Error loading filtered assets from $directory: $e');
+      return [];
+    }
+  }
+  
+  Future<void> loadGameItems() async {
+    try {
+      final imageFiles = await _getAssetsWithFilters('images', ['.jpeg', '.jpg', '.png']);
+      
+      if (imageFiles.isEmpty) {
+        _loadDefaultItems();
+        return;
+      }
       
       gameItems = imageFiles.map((path) => GameItem.fromImagePath(path)).toList();
       gameItems.shuffle(random);
@@ -77,18 +90,13 @@ class GameState extends ChangeNotifier {
   Future<void> revealLettersSequentially() async {
     isQuestionPlaying = false;
     notifyListeners();
+    
     for (int i = 0; i < currentOptions.length; i++) {
       await Future.delayed(GameConfig.letterRevealDelay);
-      String letter = currentOptions[i];
-      
       visibleLetterCount = i + 1;
       notifyListeners();
       
-      try {
-        await audioService.playLetter(letter);
-      } catch (e) {
-        print('Error playing letter audio: $e');
-      }
+      await audioService.playLetter(currentOptions[i]);
     }
   }
   

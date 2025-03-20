@@ -21,6 +21,23 @@ const synthesizeSpeech = async (text, useSSML = false) => {
   return response.audioContent;
 };
 
+// Enhanced utility functions to reduce duplicate code
+async function directoryExists(path) {
+  try {
+    await fs.access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureDirectoryExists(dirPath) {
+  if (!(await directoryExists(dirPath))) {
+    await fs.mkdir(dirPath, { recursive: true });
+    console.log(`Created directory: ${dirPath}`);
+  }
+}
+
 async function generateAudioFile(text, outputPath, useSSML = false) {
   try {
     const audioContent = await synthesizeSpeech(text, useSSML);
@@ -31,31 +48,58 @@ async function generateAudioFile(text, outputPath, useSSML = false) {
   }
 }
 
-async function directoryExists(path) {
-  try {
-    await fs.access(path);
-    return true;
-  } catch {
-    return false;
+// Process a batch of audio files with the same handling pattern
+async function processBatchAudio(directory, items, namePrefix = "", delayMs = 1000) {
+  await ensureDirectoryExists(directory);
+  
+  for (let i = 0; i < items.length; i++) {
+    const outputPath = path.join(directory, `${namePrefix}${i + 1}.mp3`);
+    
+    if (!(await directoryExists(outputPath))) {
+      console.log(`Processing: ${namePrefix}${i + 1} - "${items[i]}"`);
+      await generateAudioFile(items[i], outputPath);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    } else {
+      console.log(`Skipping ${namePrefix}${i + 1}.mp3 - already exists`);
+    }
+  }
+}
+
+// Process variations of questions for each word
+async function processQuestionVariations(questionDir, baseName, variations, delayMs = 1000) {
+  for (let i = 0; i < variations.length; i++) {
+    const questionText = variations[i].replace('$word', baseName);
+    const outputPath = path.join(questionDir, `${baseName}_question_${i + 1}.mp3`);
+
+    if (!(await directoryExists(outputPath))) {
+      console.log(`Processing: Question variation ${i + 1} for ${baseName}`);
+      await generateAudioFile(questionText, outputPath);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    } else {
+      console.log(`Skipping ${baseName}_question_${i + 1}.mp3 - already exists`);
+    }
   }
 }
 
 async function generateAllAudio() {
   try {
-    const imagesDir = path.join(process.cwd(), 'assets/images'); // Updated path
+    const imagesDir = path.join(process.cwd(), 'assets/images');
     const audioDir = new URL('../assets/audio', import.meta.url).pathname;
-    const wordsDir = path.join(audioDir, 'words');
-
-    // Create audio directory if it doesn't exist
-    if (!(await directoryExists(audioDir))) {
-      await fs.mkdir(audioDir, { recursive: true });
-    }
     
-    // Create words directory if it doesn't exist
-    if (!(await directoryExists(wordsDir))) {
-      await fs.mkdir(wordsDir, { recursive: true });
-    }
-
+    // Define subdirectories
+    const wordsDir = path.join(audioDir, 'words');
+    const otherDir = path.join(audioDir, 'other');
+    const congratsDir = path.join(audioDir, 'congrats');
+    const supportDir = path.join(audioDir, 'support');
+    const questionDir = path.join(audioDir, 'questions');
+    const lettersDir = path.join(audioDir, 'letters');
+    
+    // Ensure directories exist
+    await ensureDirectoryExists(audioDir);
+    await ensureDirectoryExists(wordsDir);
+    await ensureDirectoryExists(otherDir);
+    
+    // Process word audio files
     const files = await fs.readdir(imagesDir);
     const processedNames = new Set();
 
@@ -81,10 +125,8 @@ async function generateAllAudio() {
         continue;
       }
 
-      const text = `${baseName}`;
-
       console.log(`Processing: ${baseName}`);
-      await generateAudioFile(text, outputPath);
+      await generateAudioFile(baseName, outputPath);
 
       // Add a small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -92,12 +134,8 @@ async function generateAllAudio() {
 
     // Generate the "the word is" prompt
     console.log("Generating 'the word is' prompt...");
-    const otherDir = path.join(audioDir, "other");
-    if (!(await directoryExists(otherDir))) {
-      await fs.mkdir(otherDir, { recursive: true });
-    }
-    
     const wordIsPath = path.join(otherDir, `the_word_is.mp3`);
+    
     if (!(await directoryExists(wordIsPath))) {
       console.log(`Processing: "the word is" prompt`);
       await generateAudioFile("the word is", wordIsPath);
@@ -107,11 +145,6 @@ async function generateAllAudio() {
 
     // Generate congratulatory messages
     console.log("Generating congratulatory messages...");
-    const congratsDir = path.join(audioDir, "congrats");
-    if (!(await directoryExists(congratsDir))) {
-      await fs.mkdir(congratsDir, { recursive: true });
-    }
-
     const congratulatoryMessages = [
       "Fantastic job!",
       "You're amazing!",
@@ -134,26 +167,11 @@ async function generateAllAudio() {
       "What a superstar!",
       "You make learning fun!"
     ];
-
-    for (let i = 0; i < congratulatoryMessages.length; i++) {
-      const outputPath = path.join(congratsDir, `congrats_${i + 1}.mp3`);
-      
-      if (!(await directoryExists(outputPath))) {
-        console.log(`Processing: Congratulation message ${i + 1}`);
-        await generateAudioFile(congratulatoryMessages[i], outputPath);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        console.log(`Skipping congrats_${i + 1}.mp3 - already exists`);
-      }
-    }
+    
+    await processBatchAudio(congratsDir, congratulatoryMessages, "congrats_");
 
     // Generate supportive messages
     console.log("Generating supportive messages...");
-    const supportDir = path.join(audioDir, "support");
-    if (!(await directoryExists(supportDir))) {
-      await fs.mkdir(supportDir, { recursive: true });
-    }
-
     const supportiveMessages = [
       "Sounds can be tricky.",
       "Want to try again?",
@@ -176,26 +194,12 @@ async function generateAllAudio() {
       "Take your time.",
       "You're the boss."
     ];
-
-    for (let i = 0; i < supportiveMessages.length; i++) {
-      const outputPath = path.join(supportDir, `support_${i + 1}.mp3`);
-      
-      if (!(await directoryExists(outputPath))) {
-        console.log(`Processing: Supportive message ${i + 1}`);
-        await generateAudioFile(supportiveMessages[i], outputPath);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        console.log(`Skipping support_${i + 1}.mp3 - already exists`);
-      }
-    }
+    
+    await processBatchAudio(supportDir, supportiveMessages, "support_");
 
     // Add variations for "Which letter does $word begin with?"
     console.log("Generating 'which letter does $word begin with?' prompts...");
-    const questionDir = path.join(audioDir, "questions");
-    if (!(await directoryExists(questionDir))) {
-      await fs.mkdir(questionDir, { recursive: true });
-    }
-
+    
     const questionVariations = [
       "Which letter does $word begin with?",
       "Can you tell me the first letter of $word?",
@@ -204,32 +208,22 @@ async function generateAllAudio() {
       "What is the starting letter of $word?"
     ];
 
+    // Process each word for question variations
+    await ensureDirectoryExists(questionDir);
     for (const file of files) {
       const baseName = file.toLowerCase()
-        .replace(/\(\d+\)/, '') // Remove (1), (2), etc.
-        .replace(/\.[^/.]+$/, '') // Remove file extension
+        .replace(/\(\d+\)/, '')
+        .replace(/\.[^/.]+$/, '')
         .trim();
-
-      for (let i = 0; i < questionVariations.length; i++) {
-        const questionText = questionVariations[i].replace('$word', baseName);
-        const outputPath = path.join(questionDir, `${baseName}_question_${i + 1}.mp3`);
-
-        if (!(await directoryExists(outputPath))) {
-          console.log(`Processing: Question variation ${i + 1} for ${baseName}`);
-          await generateAudioFile(questionText, outputPath);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          console.log(`Skipping ${baseName}_question_${i + 1}.mp3 - already exists`);
-        }
-      }
+        
+      if (!processedNames.has(baseName)) continue;
+      
+      await processQuestionVariations(questionDir, baseName, questionVariations);
     }
 
     // Generate letter sounds
     console.log("Generating letter sounds...");
-    const lettersDir = path.join(audioDir, "letters");
-    if (!(await directoryExists(lettersDir))) {
-      await fs.mkdir(lettersDir, { recursive: true });
-    }
+    await ensureDirectoryExists(lettersDir);
 
     // Mapping of letters to their phonetic letter names
     const letterNames = {
