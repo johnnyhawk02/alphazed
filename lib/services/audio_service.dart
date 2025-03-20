@@ -1,7 +1,7 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
 import 'dart:math';
+import 'asset_loader.dart';
 
 typedef VoidCallback = void Function();
 
@@ -31,26 +31,10 @@ class AudioService {
     _genericPlayer.dispose();
   }
   
-  // Shared utility method for asset loading
-  Future<List<String>> _getAssetsWithPattern(String directory, String extension) async {
-    try {
-      final manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-      
-      return manifestMap.keys
-          .where((key) => key.startsWith('assets/$directory/') && 
-                         key.endsWith(extension))
-          .toList();
-    } catch (e) {
-      print('Error loading assets from $directory: $e');
-      return [];
-    }
-  }
-  
   // Shared method for playing random audio from a directory
   Future<void> _playRandomAudioFromDirectory(String directory, AudioPlayer player) async {
     try {
-      final audioFiles = await _getAssetsWithPattern(directory, '.mp3');
+      final audioFiles = await AssetLoader.getAssets(directory: directory, extension: '.mp3');
       
       if (audioFiles.isNotEmpty) {
         final random = Random();
@@ -120,7 +104,7 @@ class AudioService {
   Future<void> playCongratulations() async {
     await _safeAudioOperation('playCongratulations', () async {
       // Play random congratulatory message
-      final audioFiles = await _getAssetsWithPattern('audio/congrats', '.mp3');
+      final audioFiles = await AssetLoader.getAssets(directory: 'audio/congrats', extension: '.mp3');
       
       if (audioFiles.isNotEmpty) {
         final random = Random();

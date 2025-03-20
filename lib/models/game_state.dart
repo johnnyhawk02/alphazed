@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'package:flutter/services.dart';
-import 'dart:convert';
 import '../models/game_item.dart';
 import '../services/audio_service.dart';
+import '../services/asset_loader.dart';
 import '../config/game_config.dart';
 
 class GameState extends ChangeNotifier {
@@ -24,25 +23,12 @@ class GameState extends ChangeNotifier {
     audioService.onCongratsStart = hideLetters;
   }
   
-  // Shared utility method for asset loading with filtering
-  Future<List<String>> _getAssetsWithFilters(String directory, List<String> extensions) async {
-    try {
-      final manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-      
-      return manifestMap.keys
-          .where((key) => key.startsWith('assets/$directory/') && 
-                         extensions.any((ext) => key.endsWith(ext)))
-          .toList();
-    } catch (e) {
-      print('Error loading filtered assets from $directory: $e');
-      return [];
-    }
-  }
-  
   Future<void> loadGameItems() async {
     try {
-      final imageFiles = await _getAssetsWithFilters('images', ['.jpeg', '.jpg', '.png']);
+      final imageFiles = await AssetLoader.getAssets(
+        directory: 'images',
+        extensions: ['.jpeg', '.jpg', '.png']
+      );
       
       if (imageFiles.isEmpty) {
         _loadDefaultItems();
