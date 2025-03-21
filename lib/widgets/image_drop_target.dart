@@ -50,7 +50,8 @@ class _ImageDropTargetState extends State<ImageDropTarget> with SingleTickerProv
       onWillAcceptWithDetails: (data) {
         setState(() => isHovering = true);
         _controller.forward();
-        return data != null;
+        // Always return true since data is never null
+        return true;
       },
       onLeave: (_) {
         setState(() => isHovering = false);
@@ -59,7 +60,8 @@ class _ImageDropTargetState extends State<ImageDropTarget> with SingleTickerProv
       onAcceptWithDetails: (data) {
         setState(() => isHovering = false);
         _controller.reverse();
-        widget.onLetterAccepted(data);
+        // Extract the actual string data from DragTargetDetails object
+        widget.onLetterAccepted(data.data);
       },
       builder: (context, candidateData, rejectedData) {
         return ScaleTransition(

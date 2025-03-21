@@ -22,11 +22,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _showCelebration = false;
   bool _showWrongAnimation = false;
   
+  // Add a key to track the image container position
+  final GlobalKey _imageContainerKey = GlobalKey();
+  
   // Preloaded Lottie compositions
   LottieComposition? _celebrationAnimation;
   LottieComposition? _wrongAnimation;
   bool _animationsLoaded = false;
   bool _loadingFailed = false;
+
+  // Store the image container rect
+  Rect? _imageRect;
 
   @override
   void initState() {
@@ -61,13 +67,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         print('Animation loading timed out after 5 seconds');
       }
     });
+    
+    // Add a post frame callback to get the image position after rendering
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateImageRect();
+    });
   }
   
   // Preload Lottie animations
   Future<void> _preloadAnimations() async {
     try {
       // Load celebration animation
-      _celebrationAnimation = await AssetLottie('assets/animations/anim1.json').load();
+      _celebrationAnimation = await AssetLottie('assets/animations/correct.json').load();
       
       // Load wrong animation
       _wrongAnimation = await AssetLottie('assets/animations/wrong.json').load();
@@ -97,6 +108,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  // New method to get the position and size of the image container
+  void _updateImageRect() {
+    try {
+      if (_imageContainerKey.currentContext != null) {
+        final RenderBox box = _imageContainerKey.currentContext!.findRenderObject() as RenderBox;
+        final position = box.localToGlobal(Offset.zero);
+        setState(() {
+          _imageRect = Rect.fromLTWH(position.dx, position.dy, box.size.width, box.size.height);
+        });
+      }
+    } catch (e) {
+      print('Error updating image rect: $e');
+    }
+  }
+
   @override
   void dispose() {
     if (_controller.isAnimating) {
@@ -122,6 +148,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   Widget build(BuildContext context) {
     return OrientationBuilder(
       builder: (context, orientation) {
+        // Post frame callback to update image position on layout changes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _updateImageRect();
+        });
+        
         return Stack(
           children: [
             Scaffold(
@@ -167,25 +198,67 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 },
               ),
             ),
-            if (_showCelebration && _celebrationAnimation != null)
-              Positioned.fill(
+            
+            // Show animations positioned over the image if _imageRect is available
+            if (_showCelebration && _celebrationAnimation != null && _imageRect != null)
+              Positioned(
+                left: _imageRect!.left,
+                top: _imageRect!.top,
+                width: _imageRect!.width,
+                height: _imageRect!.height,
                 child: Lottie(
                   composition: _celebrationAnimation,
                   controller: _lottieController,
                   repeat: false,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                 ),
               ),
-            if (_showWrongAnimation && _wrongAnimation != null)
-              Positioned.fill(
+            
+            // Show animations positioned over the image if _imageRect is available
+            if (_showWrongAnimation && _wrongAnimation != null && _imageRect != null)
+              Positioned(
+                left: _imageRect!.left,
+                top: _imageRect!.top,
+                width: _imageRect!.width,
+                height: _imageRect!.height,
                 child: Lottie(
                   composition: _wrongAnimation,
                   controller: _wrongAnimationController,
                   repeat: false,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                 ),
               ),
               
+            // Fallback to centered animations if image position is not available
+            if (_showCelebration && _celebrationAnimation != null && _imageRect == null)
+              Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: Lottie(
+                    composition: _celebrationAnimation,
+                    controller: _lottieController,
+                    repeat: false,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              
+            // Fallback to centered animations if image position is not available
+            if (_showWrongAnimation && _wrongAnimation != null && _imageRect == null)
+              Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: Lottie(
+                    composition: _wrongAnimation,
+                    controller: _wrongAnimationController,
+                    repeat: false,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            
             // Show a reload button if animations failed to load
             if (_loadingFailed)
               Positioned(
@@ -228,6 +301,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
           flex: 3,
           child: Center(
             child: Container(
+              key: _imageContainerKey, // Add the key to the image container
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
                 boxShadow: [
@@ -260,6 +334,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       children: [
         Expanded(
           child: Container(
+            key: _imageContainerKey, // Add the key to the image container
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
               boxShadow: [
