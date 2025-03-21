@@ -28,8 +28,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   // Preloaded Lottie compositions
   LottieComposition? _celebrationAnimation;
   LottieComposition? _wrongAnimation;
-  bool _animationsLoaded = false;
-  bool _loadingFailed = false;
 
   // Store the image container rect
   Rect? _imageRect;
@@ -54,19 +52,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
     _controller.forward();
     
-    // Preload Lottie animations with a timeout
+    // Preload Lottie animations
     _preloadAnimations();
-    
-    // Add a safety timeout in case animations fail to load
-    Future.delayed(const Duration(seconds: 5), () {
-      if (!_animationsLoaded && mounted) {
-        setState(() {
-          _loadingFailed = true;
-          _animationsLoaded = true; // Force animations to be considered loaded
-        });
-        print('Animation loading timed out after 5 seconds');
-      }
-    });
     
     // Add a post frame callback to get the image position after rendering
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -91,20 +78,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       if (_wrongAnimation != null) {
         _wrongAnimationController.duration = _wrongAnimation!.duration;
       }
-      
-      if (mounted) {
-        setState(() {
-          _animationsLoaded = true;
-        });
-      }
     } catch (e) {
       print('Error loading animations: $e');
-      if (mounted) {
-        setState(() {
-          _loadingFailed = true;
-          _animationsLoaded = true; // Force animations to be considered loaded despite the error
-        });
-      }
     }
   }
 
@@ -169,13 +144,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               body: Consumer2<GameState, AudioService>(
                 builder: (context, gameState, audioService, _) {
                   if (gameState.currentItem == null) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-                  
-                  // Don't wait for animations if they failed to load
-                  if (!_animationsLoaded && !_loadingFailed) {
                     return const Center(
                       child: CircularProgressIndicator(),
                     );
@@ -256,35 +224,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     repeat: false,
                     fit: BoxFit.contain,
                   ),
-                ),
-              ),
-            
-            // Show a reload button if animations failed to load
-            if (_loadingFailed)
-              Positioned(
-                bottom: 16,
-                right: 16,
-                child: FloatingActionButton(
-                  onPressed: () {
-                    setState(() {
-                      _animationsLoaded = false;
-                      _loadingFailed = false;
-                    });
-                    _preloadAnimations();
-                    // Add timeout again
-                    Future.delayed(const Duration(seconds: 5), () {
-                      if (!_animationsLoaded && mounted) {
-                        setState(() {
-                          _loadingFailed = true;
-                          _animationsLoaded = true;
-                        });
-                        print('Animation loading timed out after 5 seconds');
-                      }
-                    });
-                  },
-                  mini: true,
-                  child: const Icon(Icons.refresh),
-                  tooltip: 'Retry loading animations',
                 ),
               ),
           ],
@@ -378,18 +317,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
           } else {
             _playWrongAnimation();
             await audioService.playIncorrect();
-            if (mounted && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Try Again!', style: GameConfig.bodyTextStyle.copyWith(color: Colors.white)),
-                  backgroundColor: GameConfig.secondaryButtonColor.withOpacity(0.9),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius),
-                  ),
-                ),
-              );
-            }
           }
         },
       ),
