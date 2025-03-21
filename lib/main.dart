@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'screens/game_screen.dart';
 import 'services/audio_service.dart';
@@ -7,6 +8,21 @@ import 'config/game_config.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Lock orientation to portrait and set system UI settings
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
+  // Set system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
+
   runApp(MyApp());
 }
 
