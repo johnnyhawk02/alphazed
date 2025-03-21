@@ -305,16 +305,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         key: ValueKey(gameState.currentItem!.imagePath),
         item: gameState.currentItem!,
         onLetterAccepted: (letter) async {
-          if (letter.toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
-            _playCelebrationAnimation();
-            await audioService.playCongratulations();
-            if (mounted && context.mounted) {
-              _controller.reverse().then((_) {
-                gameState.nextImage();
-                _controller.forward();
-              });
-            }
-          } else {
+          if (letter.toLowerCase() != gameState.currentItem!.firstLetter.toLowerCase()) {
             _playWrongAnimation();
             await audioService.playIncorrect();
           }
@@ -339,6 +330,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               letter: gameState.currentOptions[index],
               onTap: () => audioService.playLetter(gameState.currentOptions[index]),
               visible: index < gameState.visibleLetterCount && !gameState.isQuestionPlaying,
+              onDragSuccess: (success) async {
+                if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
+                  _playCelebrationAnimation();
+                  await audioService.playCongratulations();
+                  
+                  // Wait for animation to complete
+                  if (_lottieController.isAnimating) {
+                    await _lottieController.forward();
+                  }
+                  
+                  if (mounted && context.mounted) {
+                    await _controller.reverse();
+                    gameState.nextImage();
+                    _controller.forward();
+                  }
+                }
+              },
             ),
           ),
         ),

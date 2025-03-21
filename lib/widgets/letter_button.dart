@@ -5,12 +5,14 @@ class LetterButton extends StatefulWidget {
   final String letter;
   final VoidCallback onTap;
   final bool visible;
+  final ValueChanged<bool>? onDragSuccess;  // Add callback for successful drops
   
   const LetterButton({
     super.key,
     required this.letter,
     required this.onTap,
     this.visible = true,
+    this.onDragSuccess,
   });
 
   @override
@@ -18,26 +20,21 @@ class LetterButton extends StatefulWidget {
 }
 
 class _LetterButtonState extends State<LetterButton> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
+  late final AnimationController _controller = AnimationController(
+    duration: const Duration(milliseconds: 150),
+    vsync: this,
+  );
+
+  late final Animation<double> _scaleAnimation = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOut,
+  ).drive(Tween<double>(
+    begin: 1.0,
+    end: 0.95,
+  ));
+
   bool _isDragging = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
-  }
+  bool _isHidden = false;
 
   @override
   void dispose() {
@@ -51,14 +48,22 @@ class _LetterButtonState extends State<LetterButton> with SingleTickerProviderSt
   }
 
   void _handleDragEnd(DraggableDetails details) {
-    setState(() => _isDragging = false);
+    setState(() {
+      _isDragging = false;
+      if (details.wasAccepted) {
+        _isHidden = true;
+        if (widget.onDragSuccess != null) {
+          widget.onDragSuccess!(true);
+        }
+      }
+    });
     _controller.reverse();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.visible) {
-      return SizedBox(
+    if (!widget.visible || _isHidden) {
+      return const SizedBox(
         width: GameConfig.letterButtonSize,
         height: GameConfig.letterButtonSize,
       );
@@ -70,9 +75,9 @@ class _LetterButtonState extends State<LetterButton> with SingleTickerProviderSt
       onDragEnd: _handleDragEnd,
       onDraggableCanceled: (_, __) => _controller.reverse(),
       feedback: _buildLetterCircle(isForFeedback: true),
-      childWhenDragging: Opacity(
+      childWhenDragging: const Opacity(
         opacity: 0.3,
-        child: _buildLetterCircle(),
+        child: _EmptyLetterCircle(),
       ),
       child: GestureDetector(
         onTap: widget.onTap,
@@ -101,6 +106,19 @@ class _LetterButtonState extends State<LetterButton> with SingleTickerProviderSt
           ),
         ),
       ),
+    );
+  }
+}
+
+class _EmptyLetterCircle extends StatelessWidget {
+  const _EmptyLetterCircle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: GameConfig.letterButtonSize,
+      height: GameConfig.letterButtonSize,
+      decoration: GameConfig.getLetterButtonDecoration(isActive: true),
     );
   }
 }
