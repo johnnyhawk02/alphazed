@@ -63,16 +63,16 @@ class MyApp extends StatelessWidget {
             bodyColor: GameConfig.textColor,
           ),
           cardTheme: CardTheme(
-            elevation: 8,
+            elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius),
+              borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
             ),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              elevation: 4,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius),
+                borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
               ),
             ),
           ),

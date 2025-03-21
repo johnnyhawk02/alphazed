@@ -132,7 +132,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
           children: [
             Scaffold(
               appBar: AppBar(
-                elevation: 0,
+                elevation: 1,
                 backgroundColor: Colors.transparent,
                 centerTitle: true,
                 title: Text(
@@ -243,13 +243,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               key: _imageContainerKey, // Add the key to the image container
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
-                    blurRadius: 5,
-                    spreadRadius: 1,
-                  ),
-                ],
+                boxShadow: [], // Removed shadows
               ),
               child: buildImageDropTarget(gameState, audioService), // Removed unnecessary ClipRRect
             ),
@@ -273,13 +267,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             key: _imageContainerKey, // Add the key to the image container
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
-                  blurRadius: 5,
-                  spreadRadius: 1,
-                ),
-              ],
+              boxShadow: [], // Removed shadows
             ),
             child: buildImageDropTarget(gameState, audioService), // Removed unnecessary ClipRRect
           ),
@@ -327,7 +315,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               onDragSuccess: (success) async {
                 if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
                   _playCelebrationAnimation();
-                  await audioService.playCongratulations();
+                  await Future.wait([
+                    audioService.playAudio('assets/audio/other/bell.mp3'), // Play bell sound
+                    audioService.playCongratulations(), // Play congratulations audio
+                  ]);
                   
                   // Wait for animation to complete
                   if (_lottieController.isAnimating) {

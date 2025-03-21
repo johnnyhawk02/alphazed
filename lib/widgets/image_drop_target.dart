@@ -125,14 +125,7 @@ class _ImageDropTargetState extends State<ImageDropTarget>
           child: Container(
             padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((0.05 * 255).toInt()), // Match letter circle shadow
-                  blurRadius: 5,
-                  spreadRadius: 1,
-                  offset: Offset(0, 4),
-                ),
-              ],
+              boxShadow: [], // Removed shadows
               borderRadius: BorderRadius.circular(_borderRadius),
             ),
             child: ClipRRect(
