@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/game_config.dart';
+import '../mixins/interactive_animation_mixin.dart';
 
 class LetterButton extends StatefulWidget {
   final String letter;
@@ -19,45 +20,23 @@ class LetterButton extends StatefulWidget {
   State<LetterButton> createState() => _LetterButtonState();
 }
 
-class _LetterButtonState extends State<LetterButton> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    duration: const Duration(milliseconds: 150),
-    vsync: this,
-  );
-
-  late final Animation<double> _scaleAnimation = CurvedAnimation(
-    parent: _controller,
-    curve: Curves.easeInOut,
-  ).drive(Tween<double>(
-    begin: 1.0,
-    end: 0.95,
-  ));
-
+class _LetterButtonState extends State<LetterButton> with TickerProviderStateMixin, InteractiveAnimationMixin {
   bool _isDragging = false;
   bool _isHidden = false;
 
   @override
+  void initState() {
+    super.initState();
+    initializeAnimation(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+  }
+
+  @override
   void dispose() {
-    _controller.dispose();
+    animationController.dispose();
     super.dispose();
-  }
-
-  void _handleDragStart() {
-    setState(() => _isDragging = true);
-    _controller.forward();
-  }
-
-  void _handleDragEnd(DraggableDetails details) {
-    setState(() {
-      _isDragging = false;
-      if (details.wasAccepted) {
-        _isHidden = true;
-        if (widget.onDragSuccess != null) {
-          widget.onDragSuccess!(true);
-        }
-      }
-    });
-    _controller.reverse();
   }
 
   @override
@@ -71,9 +50,21 @@ class _LetterButtonState extends State<LetterButton> with SingleTickerProviderSt
 
     return Draggable<String>(
       data: widget.letter,
-      onDragStarted: _handleDragStart,
-      onDragEnd: _handleDragEnd,
-      onDraggableCanceled: (_, __) => _controller.reverse(),
+      onDragStarted: () {
+        setState(() => _isDragging = true);
+        animationController.forward();
+      },
+      onDragEnd: (details) {
+        setState(() {
+          _isDragging = false;
+          if (details.wasAccepted) {
+            _isHidden = true;
+            widget.onDragSuccess?.call(true);
+          }
+        });
+        animationController.reverse();
+      },
+      onDraggableCanceled: (_, __) => animationController.reverse(),
       feedback: _buildLetterCircle(isForFeedback: true),
       childWhenDragging: const Opacity(
         opacity: 0.3,
@@ -81,11 +72,11 @@ class _LetterButtonState extends State<LetterButton> with SingleTickerProviderSt
       ),
       child: GestureDetector(
         onTap: widget.onTap,
-        onTapDown: (_) => _controller.forward(),
-        onTapUp: (_) => _controller.reverse(),
-        onTapCancel: () => _controller.reverse(),
+        onTapDown: (_) => animationController.forward(),
+        onTapUp: (_) => animationController.reverse(),
+        onTapCancel: () => animationController.reverse(),
         child: ScaleTransition(
-          scale: _scaleAnimation,
+          scale: scaleAnimation,
           child: _buildLetterCircle(),
         ),
       ),

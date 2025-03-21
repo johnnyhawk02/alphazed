@@ -245,16 +245,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    spreadRadius: 2,
+                    color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
+                    blurRadius: 5,
+                    spreadRadius: 1,
                   ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-                child: buildImageDropTarget(gameState, audioService),
-              ),
+              child: buildImageDropTarget(gameState, audioService), // Removed unnecessary ClipRRect
             ),
           ),
         ),
@@ -278,16 +275,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  spreadRadius: 2,
+                  color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
+                  blurRadius: 5,
+                  spreadRadius: 1,
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-              child: buildImageDropTarget(gameState, audioService),
-            ),
+            child: buildImageDropTarget(gameState, audioService), // Removed unnecessary ClipRRect
           ),
         ),
         SizedBox(width: GameConfig.letterSpacing),

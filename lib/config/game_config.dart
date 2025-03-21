@@ -45,7 +45,7 @@ class GameConfig {
     end: Alignment.bottomRight,
     colors: [
       primaryButtonColor,
-      primaryButtonColor.withOpacity(0.8),
+      primaryButtonColor.withAlpha((0.8 * 255).toInt()), // Replaced withOpacity
     ],
   );
   
@@ -89,7 +89,7 @@ class GameConfig {
           end: Alignment.bottomRight,
           colors: [
             highlightColor,
-            highlightColor.withOpacity(0.8),
+            highlightColor.withAlpha((0.8 * 255).toInt()), // Replaced withOpacity
           ],
         ) : 
         LinearGradient(
@@ -97,15 +97,15 @@ class GameConfig {
           end: Alignment.bottomRight,
           colors: [
             defaultBackgroundColor,
-            defaultBackgroundColor.withOpacity(0.9),
+            defaultBackgroundColor.withAlpha((0.9 * 255).toInt()), // Replaced withOpacity
           ],
         ),
       borderRadius: BorderRadius.circular(defaultBorderRadius),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          spreadRadius: 0,
-          blurRadius: 10,
+          color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
+          spreadRadius: 1,
+          blurRadius: 5,
           offset: Offset(0, 4),
         ),
       ],
@@ -123,9 +123,9 @@ class GameConfig {
       borderRadius: BorderRadius.circular(letterButtonRadius),
       boxShadow: isActive ? [
         BoxShadow(
-          color: Colors.black.withOpacity(0.2),
-          spreadRadius: 0,
-          blurRadius: 8,
+          color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
+          spreadRadius: 1,
+          blurRadius: 5,
           offset: Offset(0, 4),
         ),
       ] : null,

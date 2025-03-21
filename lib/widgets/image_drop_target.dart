@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_item.dart';
 import '../config/game_config.dart';
+import '../mixins/interactive_animation_mixin.dart';
 
 class ImageDropTarget extends StatefulWidget {
   final GameItem item;
@@ -16,32 +17,89 @@ class ImageDropTarget extends StatefulWidget {
   State<ImageDropTarget> createState() => _ImageDropTargetState();
 }
 
-class _ImageDropTargetState extends State<ImageDropTarget> with SingleTickerProviderStateMixin {
+class _ImageDropTargetState extends State<ImageDropTarget> 
+    with TickerProviderStateMixin, InteractiveAnimationMixin {
+  
+  // Constants for styling
+  static const double _borderRadius = 24.0; // Increased from 16.0 to make corners more rounded
+  
   bool isHovering = false;
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    initializeAnimation(
       duration: GameConfig.dropAnimationDuration,
+      beginScale: 1.0,
+      endScale: 1.05,
       vsync: this,
     );
-
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    animationController.dispose();
     super.dispose();
+  }
+  
+  // Build the word label at the bottom
+  Widget _buildWordLabel() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.black.withAlpha((0.3 * 255).toInt()), // Replaced withOpacity
+          ],
+        ),
+      ),
+      padding: EdgeInsets.symmetric(
+        vertical: GameConfig.defaultPadding,
+        horizontal: GameConfig.defaultPadding * 1.5,
+      ),
+      child: Text(
+        widget.item.word,
+        style: GameConfig.wordTextStyle.copyWith(
+          color: Colors.white,
+          shadows: [
+            Shadow(
+              offset: Offset(1, 1),
+              blurRadius: 3,
+              color: Colors.black.withAlpha((0.6 * 255).toInt()), // Replaced withOpacity
+            ),
+          ],
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+  
+  // Build the hover indicator
+  Widget _buildHoverIndicator() {
+    return Center(
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha((0.8 * 255).toInt()), // Replaced withOpacity
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
+              blurRadius: 5,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.add_circle_outline,
+          size: 60,
+          color: GameConfig.primaryButtonColor,
+        ),
+      ),
+    );
   }
 
   @override
@@ -49,91 +107,64 @@ class _ImageDropTargetState extends State<ImageDropTarget> with SingleTickerProv
     return DragTarget<String>(
       onWillAcceptWithDetails: (data) {
         setState(() => isHovering = true);
-        _controller.forward();
-        // Always return true since data is never null
+        animationController.forward();
         return true;
       },
       onLeave: (_) {
         setState(() => isHovering = false);
-        _controller.reverse();
+        animationController.reverse();
       },
       onAcceptWithDetails: (data) {
         setState(() => isHovering = false);
-        _controller.reverse();
-        // Extract the actual string data from DragTargetDetails object
+        animationController.reverse();
         widget.onLetterAccepted(data.data);
       },
       builder: (context, candidateData, rejectedData) {
         return ScaleTransition(
-          scale: _scaleAnimation,
-          child: AnimatedContainer(
-            duration: GameConfig.dropAnimationDuration,
-            decoration: GameConfig.getCardDecoration(isHighlighted: isHovering),
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 4/3,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: AnimatedOpacity(
-                        duration: GameConfig.fadeAnimationDuration,
-                        opacity: isHovering ? 0.7 : 1.0,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius),
-                          child: Image.asset(
-                            widget.item.imagePath,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (isHovering)
-                      Positioned.fill(
-                        child: Center(
-                          child: Icon(
-                            Icons.add_circle_outline,
-                            size: 60,
-                            color: GameConfig.primaryButtonColor,
-                          ),
-                        ),
-                      ),
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.6),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.vertical(
-                            bottom: Radius.circular(GameConfig.defaultBorderRadius),
-                          ),
-                        ),
-                        padding: EdgeInsets.all(GameConfig.defaultPadding),
-                        child: Text(
-                          widget.item.word,
-                          style: GameConfig.wordTextStyle.copyWith(
-                            color: Colors.white,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(1, 1),
-                                blurRadius: 2,
-                                color: Colors.black.withOpacity(0.5),
-                              ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ],
+          scale: scaleAnimation,
+          child: Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.05 * 255).toInt()), // Match letter circle shadow
+                  blurRadius: 5,
+                  spreadRadius: 1,
+                  offset: Offset(0, 4),
                 ),
+              ],
+              borderRadius: BorderRadius.circular(_borderRadius),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(_borderRadius),
+              child: Stack(
+                children: [
+                  // Image
+                  Positioned.fill(
+                    child: AnimatedOpacity(
+                      duration: GameConfig.fadeAnimationDuration,
+                      opacity: isHovering ? 0.7 : 1.0,
+                      child: AspectRatio(
+                        aspectRatio: 4/3,
+                        child: Image.asset(
+                          widget.item.imagePath,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  // Hover indicator
+                  if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
+                  
+                  // Word label
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: _buildWordLabel(),
+                  ),
+                ],
               ),
             ),
           ),
