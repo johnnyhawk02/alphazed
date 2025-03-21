@@ -8,6 +8,8 @@ import '../config/game_config.dart';
 import '../services/audio_service.dart';
 
 class GameScreen extends StatefulWidget {
+  const GameScreen({super.key});
+
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
@@ -16,7 +18,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late AnimationController _lottieController;
+  late AnimationController _wrongAnimationController;
   bool _showCelebration = false;
+  bool _showWrongAnimation = false;
+  
+  // Preloaded Lottie compositions
+  LottieComposition? _celebrationAnimation;
+  LottieComposition? _wrongAnimation;
+  bool _animationsLoaded = false;
+  bool _loadingFailed = false;
 
   @override
   void initState() {
@@ -34,8 +44,57 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
 
     _lottieController = AnimationController(vsync: this);
+    _wrongAnimationController = AnimationController(vsync: this);
 
     _controller.forward();
+    
+    // Preload Lottie animations with a timeout
+    _preloadAnimations();
+    
+    // Add a safety timeout in case animations fail to load
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!_animationsLoaded && mounted) {
+        setState(() {
+          _loadingFailed = true;
+          _animationsLoaded = true; // Force animations to be considered loaded
+        });
+        print('Animation loading timed out after 5 seconds');
+      }
+    });
+  }
+  
+  // Preload Lottie animations
+  Future<void> _preloadAnimations() async {
+    try {
+      // Load celebration animation
+      _celebrationAnimation = await AssetLottie('assets/animations/anim1.json').load();
+      
+      // Load wrong animation
+      _wrongAnimation = await AssetLottie('assets/animations/wrong.json').load();
+      
+      // Set animation durations
+      if (_celebrationAnimation != null) {
+        _lottieController.duration = _celebrationAnimation!.duration;
+      }
+      
+      if (_wrongAnimation != null) {
+        _wrongAnimationController.duration = _wrongAnimation!.duration;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _animationsLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('Error loading animations: $e');
+      if (mounted) {
+        setState(() {
+          _loadingFailed = true;
+          _animationsLoaded = true; // Force animations to be considered loaded despite the error
+        });
+      }
+    }
   }
 
   @override
@@ -49,6 +108,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _lottieController.stop();
     }
     _lottieController.dispose();
+
+    if (_wrongAnimationController.isAnimating) {
+      _wrongAnimationController.stop();
+    }
+    _wrongAnimationController.dispose();
 
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -74,12 +138,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               body: Consumer2<GameState, AudioService>(
                 builder: (context, gameState, audioService, _) {
                   if (gameState.currentItem == null) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(GameConfig.primaryButtonColor),
-                      ),
+                    return const Center(
+                      child: CircularProgressIndicator(),
                     );
                   }
+                  
+                  // Don't wait for animations if they failed to load
+                  if (!_animationsLoaded && !_loadingFailed) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  
                   return SafeArea(
                     child: FadeTransition(
                       opacity: _scaleAnimation,
@@ -97,21 +167,51 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 },
               ),
             ),
-            if (_showCelebration)
+            if (_showCelebration && _celebrationAnimation != null)
               Positioned.fill(
-                child: Lottie.asset(
-                  'assets/animations/anim1.json',
+                child: Lottie(
+                  composition: _celebrationAnimation,
                   controller: _lottieController,
-                  onLoaded: (composition) {
-                    _lottieController.duration = composition.duration;
-                    _lottieController.forward().whenComplete(() {
-                      if (mounted) {
-                        _hideCelebrationAnimation();
+                  repeat: false,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            if (_showWrongAnimation && _wrongAnimation != null)
+              Positioned.fill(
+                child: Lottie(
+                  composition: _wrongAnimation,
+                  controller: _wrongAnimationController,
+                  repeat: false,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              
+            // Show a reload button if animations failed to load
+            if (_loadingFailed)
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      _animationsLoaded = false;
+                      _loadingFailed = false;
+                    });
+                    _preloadAnimations();
+                    // Add timeout again
+                    Future.delayed(const Duration(seconds: 5), () {
+                      if (!_animationsLoaded && mounted) {
+                        setState(() {
+                          _loadingFailed = true;
+                          _animationsLoaded = true;
+                        });
+                        print('Animation loading timed out after 5 seconds');
                       }
                     });
                   },
-                  repeat: false,
-                  fit: BoxFit.cover,
+                  mini: true,
+                  child: const Icon(Icons.refresh),
+                  tooltip: 'Retry loading animations',
                 ),
               ),
           ],
@@ -201,6 +301,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               });
             }
           } else {
+            _playWrongAnimation();
             await audioService.playIncorrect();
             if (mounted && context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -259,6 +360,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _hideCelebrationAnimation() {
     setState(() {
       _showCelebration = false;
+    });
+  }
+
+  void _playWrongAnimation() {
+    setState(() {
+      _showWrongAnimation = true;
+    });
+
+    _wrongAnimationController.reset();
+    _wrongAnimationController.forward().whenComplete(() {
+      if (mounted) {
+        _hideWrongAnimation();
+      }
+    });
+  }
+
+  void _hideWrongAnimation() {
+    setState(() {
+      _showWrongAnimation = false;
     });
   }
 }

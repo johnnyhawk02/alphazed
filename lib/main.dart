@@ -12,6 +12,8 @@ void main() {
 
 class MyApp extends StatelessWidget {
   final AudioService audioService = AudioService();
+
+  MyApp({super.key});
   
   @override
   Widget build(BuildContext context) {
@@ -34,7 +36,6 @@ class MyApp extends StatelessWidget {
             primary: GameConfig.primaryButtonColor,
             secondary: GameConfig.secondaryButtonColor,
             surface: GameConfig.defaultBackgroundColor,
-            background: GameConfig.defaultBackgroundColor,
           ),
           textTheme: TextTheme(
             titleLarge: GameConfig.titleTextStyle,

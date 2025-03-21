@@ -7,10 +7,10 @@ class ImageDropTarget extends StatefulWidget {
   final Function(String) onLetterAccepted;
 
   const ImageDropTarget({
-    Key? key,
+    super.key,
     required this.item,
     required this.onLetterAccepted,
-  }) : super(key: key);
+  });
 
   @override
   State<ImageDropTarget> createState() => _ImageDropTargetState();
@@ -47,7 +47,7 @@ class _ImageDropTargetState extends State<ImageDropTarget> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return DragTarget<String>(
-      onWillAccept: (data) {
+      onWillAcceptWithDetails: (data) {
         setState(() => isHovering = true);
         _controller.forward();
         return data != null;
@@ -56,7 +56,7 @@ class _ImageDropTargetState extends State<ImageDropTarget> with SingleTickerProv
         setState(() => isHovering = false);
         _controller.reverse();
       },
-      onAccept: (data) {
+      onAcceptWithDetails: (data) {
         setState(() => isHovering = false);
         _controller.reverse();
         widget.onLetterAccepted(data);

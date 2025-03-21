@@ -7,11 +7,11 @@ class LetterButton extends StatefulWidget {
   final bool visible;
   
   const LetterButton({
-    Key? key,
+    super.key,
     required this.letter,
     required this.onTap,
     this.visible = true,
-  }) : super(key: key);
+  });
 
   @override
   State<LetterButton> createState() => _LetterButtonState();
