@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'screens/game_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'services/audio_service.dart';
 import 'models/game_state.dart';
 import 'config/game_config.dart';
@@ -82,8 +82,8 @@ class MyApp extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: GameConfig.backgroundGradient,
             ),
-            child: SafeArea(
-              child: LetterPictureMatch(),
+            child: const SafeArea(
+              child: WelcomeScreen(),
             ),
           ),
         ),

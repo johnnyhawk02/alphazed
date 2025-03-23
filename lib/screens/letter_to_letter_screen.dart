@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lottie/lottie.dart';
 import '../models/game_state.dart';
-import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
 import '../config/game_config.dart';
 import '../services/audio_service.dart';
 
-class LetterPictureMatch extends StatefulWidget {
-  const LetterPictureMatch({super.key});
+class LetterToLetterMatch extends StatefulWidget {
+  const LetterToLetterMatch({super.key});
 
   @override
-  State<LetterPictureMatch> createState() => _LetterPictureMatchState();
+  State<LetterToLetterMatch> createState() => _LetterToLetterMatchState();
 }
 
-class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBindingObserver, TickerProviderStateMixin {
+class _LetterToLetterMatchState extends State<LetterToLetterMatch> with WidgetsBindingObserver, TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late AnimationController _lottieController;
@@ -22,15 +21,15 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
   bool _showCelebration = false;
   bool _showWrongAnimation = false;
   
-  // Add a key to track the image container position
-  final GlobalKey _imageContainerKey = GlobalKey();
+  // Add a key to track the letter container position
+  final GlobalKey _letterContainerKey = GlobalKey();
   
   // Preloaded Lottie compositions
   LottieComposition? _celebrationAnimation;
   LottieComposition? _wrongAnimation;
 
-  // Store the image container rect
-  Rect? _imageRect;
+  // Store the letter container rect
+  Rect? _letterRect;
 
   @override
   void initState() {
@@ -55,9 +54,9 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
     // Preload Lottie animations
     _preloadAnimations();
     
-    // Add a post frame callback to get the image position after rendering
+    // Add a post frame callback to get the letter position after rendering
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateImageRect();
+      _updateLetterRect();
     });
   }
   
@@ -79,29 +78,29 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
         _wrongAnimationController.duration = _wrongAnimation!.duration;
       }
     } catch (e) {
-      // Removed print statements
+      // Handle animation loading errors
     }
   }
 
-  // New method to get the position and size of the image container
-  void _updateImageRect() {
+  // Method to get the position and size of the letter container
+  void _updateLetterRect() {
     // Add check to ensure widget is still mounted before accessing context
     if (!mounted) return;
     
     try {
-      if (_imageContainerKey.currentContext != null) {
-        final RenderBox box = _imageContainerKey.currentContext!.findRenderObject() as RenderBox;
+      if (_letterContainerKey.currentContext != null) {
+        final RenderBox box = _letterContainerKey.currentContext!.findRenderObject() as RenderBox;
         if (box.hasSize) {
           final position = box.localToGlobal(Offset.zero);
           if (mounted) {
             setState(() {
-              _imageRect = Rect.fromLTWH(position.dx, position.dy, box.size.width, box.size.height);
+              _letterRect = Rect.fromLTWH(position.dx, position.dy, box.size.width, box.size.height);
             });
           }
         }
       }
     } catch (e) {
-      // Handle errors silently
+      // Handle errors
     }
   }
 
@@ -130,10 +129,10 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
   Widget build(BuildContext context) {
     return OrientationBuilder(
       builder: (context, orientation) {
-        // Post frame callback to update image position on layout changes
+        // Post frame callback to update letter position on layout changes
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            _updateImageRect();
+            _updateLetterRect();
           }
         });
         
@@ -167,7 +166,7 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
                   ),
                 ),
                 title: Text(
-                  'Picture Matching',
+                  'Letter Matching',
                   style: GameConfig.titleTextStyle,
                 ),
               ),
@@ -198,13 +197,13 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
               ),
             ),
             
-            // Show animations positioned over the image if _imageRect is available
-            if (_showCelebration && _celebrationAnimation != null && _imageRect != null)
+            // Show animations positioned over the letter if _letterRect is available
+            if (_showCelebration && _celebrationAnimation != null && _letterRect != null)
               Positioned(
-                left: _imageRect!.left,
-                top: _imageRect!.top,
-                width: _imageRect!.width,
-                height: _imageRect!.height,
+                left: _letterRect!.left,
+                top: _letterRect!.top,
+                width: _letterRect!.width,
+                height: _letterRect!.height,
                 child: Lottie(
                   composition: _celebrationAnimation,
                   controller: _lottieController,
@@ -213,13 +212,13 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
                 ),
               ),
             
-            // Show animations positioned over the image if _imageRect is available
-            if (_showWrongAnimation && _wrongAnimation != null && _imageRect != null)
+            // Show wrong animations positioned over the letter
+            if (_showWrongAnimation && _wrongAnimation != null && _letterRect != null)
               Positioned(
-                left: _imageRect!.left,
-                top: _imageRect!.top,
-                width: _imageRect!.width,
-                height: _imageRect!.height,
+                left: _letterRect!.left,
+                top: _letterRect!.top,
+                width: _letterRect!.width,
+                height: _letterRect!.height,
                 child: Lottie(
                   composition: _wrongAnimation,
                   controller: _wrongAnimationController,
@@ -228,8 +227,8 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
                 ),
               ),
               
-            // Fallback to centered animations if image position is not available
-            if (_showCelebration && _celebrationAnimation != null && _imageRect == null)
+            // Fallback to centered animations if letter position is not available
+            if (_showCelebration && _celebrationAnimation != null && _letterRect == null)
               Center(
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.8,
@@ -243,8 +242,8 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
                 ),
               ),
               
-            // Fallback to centered animations if image position is not available
-            if (_showWrongAnimation && _wrongAnimation != null && _imageRect == null)
+            // Fallback to centered animations if letter position is not available
+            if (_showWrongAnimation && _wrongAnimation != null && _letterRect == null)
               Center(
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.8,
@@ -271,12 +270,12 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
           flex: 3,
           child: Center(
             child: Container(
-              key: _imageContainerKey, // Add the key to the image container
+              key: _letterContainerKey,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-                boxShadow: [], // Removed shadows
+                boxShadow: [],
               ),
-              child: buildImageDropTarget(gameState, audioService), // Removed unnecessary ClipRRect
+              child: buildLetterDropTarget(gameState, audioService),
             ),
           ),
         ),
@@ -295,12 +294,12 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
       children: [
         Expanded(
           child: Container(
-            key: _imageContainerKey, // Add the key to the image container
+            key: _letterContainerKey,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-              boxShadow: [], // Removed shadows
+              boxShadow: [],
             ),
-            child: buildImageDropTarget(gameState, audioService), // Removed unnecessary ClipRRect
+            child: buildLetterDropTarget(gameState, audioService),
           ),
         ),
         SizedBox(width: GameConfig.letterSpacing),
@@ -311,19 +310,45 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
     );
   }
 
-  Widget buildImageDropTarget(GameState gameState, AudioService audioService) {
-    return Hero(
-      tag: 'game_image_${gameState.currentItem!.imagePath}',
-      child: ImageDropTarget(
-        key: ValueKey(gameState.currentItem!.imagePath),
-        item: gameState.currentItem!,
-        onLetterAccepted: (letter) async {
-          if (letter.toLowerCase() != gameState.currentItem!.firstLetter.toLowerCase()) {
-            _playWrongAnimation();
-            await audioService.playIncorrect();
-          }
-        },
-      ),
+  Widget buildLetterDropTarget(GameState gameState, AudioService audioService) {
+    final targetLetter = gameState.currentItem!.firstLetter.toUpperCase();
+    
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (data) {
+        return true;
+      },
+      onAcceptWithDetails: (data) async {
+        final droppedLetter = data.data;
+        if (droppedLetter.toLowerCase() != targetLetter.toLowerCase()) {
+          _playWrongAnimation();
+          await audioService.playIncorrect();
+        }
+      },
+      builder: (context, candidateData, rejectedData) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade100,
+            borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius),
+            border: Border.all(
+              color: Colors.blue.shade300,
+              width: 3,
+            ),
+          ),
+          padding: const EdgeInsets.all(32.0),
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: Text(
+              targetLetter,
+              style: TextStyle(
+                fontSize: 150,
+                fontWeight: FontWeight.bold,
+                color: GameConfig.primaryButtonColor,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -347,8 +372,8 @@ class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBin
                 if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
                   _playCelebrationAnimation();
                   await Future.wait([
-                    audioService.playAudio('assets/audio/other/bell.mp3'), // Play bell sound
-                    audioService.playCongratulations(), // Play congratulations audio
+                    audioService.playAudio('assets/audio/other/bell.mp3'),
+                    audioService.playCongratulations(),
                   ]);
                   
                   // Wait for animation to complete
