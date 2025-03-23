@@ -44,7 +44,7 @@ class AudioService {
         await _waitForCompletion(player);
       }
     } catch (e) {
-      print('Error playing random audio from $directory: $e');
+      // Error handling
     }
   }
   
@@ -53,7 +53,7 @@ class AudioService {
     try {
       await operation();
     } catch (e) {
-      print('Error during $operationName: $e');
+      // Error handling
     }
   }
   
@@ -143,7 +143,7 @@ class AudioService {
         (state) => state.processingState == ProcessingState.completed
       );
     } catch (e) {
-      print('Error waiting for audio completion: $e');
+      // Error handling
     }
   }
 

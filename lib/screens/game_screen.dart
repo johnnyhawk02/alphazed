@@ -7,14 +7,14 @@ import '../widgets/letter_button.dart';
 import '../config/game_config.dart';
 import '../services/audio_service.dart';
 
-class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+class LetterPictureMatch extends StatefulWidget {
+  const LetterPictureMatch({super.key});
 
   @override
-  State<GameScreen> createState() => _GameScreenState();
+  State<LetterPictureMatch> createState() => _LetterPictureMatchState();
 }
 
-class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+class _LetterPictureMatchState extends State<LetterPictureMatch> with WidgetsBindingObserver, TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late AnimationController _lottieController;
@@ -79,7 +79,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         _wrongAnimationController.duration = _wrongAnimation!.duration;
       }
     } catch (e) {
-      print('Error loading animations: $e');
+      // Removed print statements
     }
   }
 
@@ -94,7 +94,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         });
       }
     } catch (e) {
-      print('Error updating image rect: $e');
+      // Removed print statements
     }
   }
 
@@ -136,7 +136,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 backgroundColor: Colors.transparent,
                 centerTitle: true,
                 title: Text(
-                  'Alphabet Learning Game',
+                  'Simple Matching',
                   style: GameConfig.titleTextStyle,
                 ),
               ),

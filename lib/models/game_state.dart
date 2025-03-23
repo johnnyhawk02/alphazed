@@ -41,7 +41,6 @@ class GameState extends ChangeNotifier {
       
       await playQuestionAndRevealLetters();
     } catch (e) {
-      print('Error loading game items: $e');
       _loadDefaultItems();
     }
   }
@@ -70,7 +69,6 @@ class GameState extends ChangeNotifier {
       await audioService.waitForQuestionCompletion();
       await revealLettersSequentially();
     } catch (e) {
-      print('Error playing audio or revealing letters: $e');
       await revealLettersSequentially();
     }
   }

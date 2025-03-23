@@ -7,24 +7,35 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:alphazed/models/game_state.dart';
+import 'package:alphazed/services/audio_service.dart';
 
 import 'package:alphazed/main.dart';
+import 'package:alphazed/screens/game_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('GameScreen loads correctly', (WidgetTester tester) async {
+    // Set up the providers for the test.
+    final audioService = AudioService();
+    final gameState = GameState(audioService: audioService);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Wrap the app with MultiProvider to provide dependencies.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AudioService>.value(value: audioService),
+          ChangeNotifierProvider<GameState>.value(value: gameState),
+        ],
+        child: MyApp(),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify that the LetterPictureMatch widget is present.
+    expect(find.byType(LetterPictureMatch), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that the SafeArea widget wrapping the LetterPictureMatch is present.
+    final safeAreaFinder = find.ancestor(of: find.byType(LetterPictureMatch), matching: find.byType(SafeArea));
+    expect(safeAreaFinder, findsOneWidget);
   });
 }

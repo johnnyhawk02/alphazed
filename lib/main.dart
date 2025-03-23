@@ -83,7 +83,7 @@ class MyApp extends StatelessWidget {
               gradient: GameConfig.backgroundGradient,
             ),
             child: SafeArea(
-              child: GameScreen(),
+              child: LetterPictureMatch(),
             ),
           ),
         ),

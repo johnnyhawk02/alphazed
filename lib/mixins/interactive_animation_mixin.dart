@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/animation.dart';
 
 mixin InteractiveAnimationMixin<T extends StatefulWidget> on State<T> {
   late final AnimationController animationController;
