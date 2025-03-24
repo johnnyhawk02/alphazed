@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/game_config.dart';
-import 'game_screen.dart';
 import 'letter_to_letter_screen.dart';
+import 'letter_to_picture.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
