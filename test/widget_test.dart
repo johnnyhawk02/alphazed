@@ -13,7 +13,7 @@ import 'package:alphazed/services/audio_service.dart';
 
 import 'package:alphazed/main.dart';
 import 'package:alphazed/screens/game_screen.dart';
-import 'package:alphazed/screens/letter_to_picture.dart';
+import 'package:alphazed/screens/letter_to_picture_screen.dart';
 
 void main() {
   testWidgets('GameScreen loads correctly', (WidgetTester tester) async {
