@@ -257,8 +257,8 @@ async function generateAllAudio() {
 
     const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
     for (const letter of alphabet) {
-      const outputPath = path.join(lettersDir, `${letter}.mp3`);
-      
+      const outputPath = path.join(lettersDir, `${letter}_.mp3`); // Add underscore to letter file names
+
       if (!(await directoryExists(outputPath))) {
         // Use the letter name instead of just the letter
         const letterName = letterNames[letter];

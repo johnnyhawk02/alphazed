@@ -85,10 +85,17 @@ class AudioService {
   
   Future<void> playLetter(String letter) async {
     await _safeAudioOperation('playLetter', () async {
-      String audioPath = 'assets/audio/letters/${letter.toLowerCase()}.mp3';
-      await rootBundle.load(audioPath); // Check if audio exists
-      await _letterPlayer.setAsset(audioPath);
-      await _letterPlayer.play();
+      // Append underscore to all letter file names
+      String audioPath = 'assets/audio/letters/${letter.toLowerCase()}_.mp3';
+      print('Attempting to play letter sound: $audioPath'); // Debug log
+
+      try {
+        await rootBundle.load(audioPath); // Check if audio exists
+        await _letterPlayer.setAsset(audioPath);
+        await _letterPlayer.play();
+      } catch (e) {
+        print('Error playing letter sound for $letter: $e'); // Error log
+      }
     });
   }
 

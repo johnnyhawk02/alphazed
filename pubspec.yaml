@@ -38,5 +38,5 @@ flutter:
     - assets/audio/other/
     - assets/audio/questions/
     - assets/audio/support/
-    - assets/audio/temp/
     - assets/animations/
+    - assets/audio/temp/
