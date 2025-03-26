@@ -21,7 +21,7 @@ class _ImageDropTargetState extends State<ImageDropTarget>
     with TickerProviderStateMixin, InteractiveAnimationMixin {
   
   // Constants for styling
-  static const double _borderRadius = 24.0; // Increased from 16.0 to make corners more rounded
+  static const double _borderRadius = 36.0; // Increased from 24.0 to make corners even more rounded
   
   bool isHovering = false;
 

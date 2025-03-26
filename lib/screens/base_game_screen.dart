@@ -12,17 +12,19 @@ class ArrowPainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
+      ..strokeWidth = 8  // Increased from 6 to 8 for thicker stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
+    // Scale up by making the arrow width even larger relative to container size
     final centerY = size.height / 2;
-    final arrowWidth = size.width * 0.6;
+    final arrowWidth = size.width * 1.5;  // Increased from 0.9 to 1.5 for a much wider arrow
     
+    // Make arrow cover almost entire container width
     final path = Path()
-      ..moveTo(size.width * 0.75, centerY - arrowWidth / 2)
-      ..lineTo(size.width * 0.25, centerY)
-      ..lineTo(size.width * 0.75, centerY + arrowWidth / 2);
+      ..moveTo(size.width * 0.95, centerY - arrowWidth / 2)  // Moved from 0.9 to 0.95
+      ..lineTo(size.width * 0.05, centerY)  // Moved from 0.1 to 0.05
+      ..lineTo(size.width * 0.95, centerY + arrowWidth / 2);  // Moved from 0.9 to 0.95
 
     canvas.drawPath(path, paint);
   }
@@ -176,21 +178,15 @@ abstract class BaseGameScreenState<T extends BaseGameScreen> extends State<T>
       elevation: 1,
       backgroundColor: Colors.transparent,
       centerTitle: true,
+      toolbarHeight: 70, // Increased AppBar height
       leading: GestureDetector(
         onTap: () => Navigator.of(context).pop(),
         child: Container(
-          margin: EdgeInsets.all(1),
-          padding: EdgeInsets.all(8),
+          margin: EdgeInsets.all(8), // Increased margin from 1 to 8
+          padding: EdgeInsets.all(12), // Increased padding from 8 to 12
           decoration: BoxDecoration(
-            color: GameConfig.primaryButtonColor,
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 4,
-                offset: Offset(0, 2),
-              )
-            ],
           ),
           child: CustomPaint(
             size: Size.infinite,
