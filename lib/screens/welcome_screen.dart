@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../config/game_config.dart';
-import 'letter_to_letter_screen.dart';
 import 'letter_to_picture_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -41,20 +40,6 @@ class WelcomeScreen extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const LetterPictureMatch(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 30),
-                _buildGameButton(
-                  context,
-                  title: 'Letter Matching',
-                  description: 'Match small letters to big letters',
-                  icon: Icons.text_fields,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const LetterToLetterMatch(),
                       ),
                     );
                   },

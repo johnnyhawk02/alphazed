@@ -2,48 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/audio_service.dart';
 import 'models/game_state.dart';
 import 'config/game_config.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Lock orientation to portrait and set system UI settings
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
-
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final AudioService audioService = AudioService();
-
-  MyApp({super.key});
+  const MyApp({super.key});
   
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         Provider<AudioService>.value(
-          value: audioService,
+          value: AudioService(),
         ),
         ChangeNotifierProvider<GameState>(
-          create: (_) => GameState(audioService: audioService)..loadGameItems(),
+          create: (_) => GameState(audioService: AudioService())..loadGameItems(),
         ),
       ],
       child: MaterialApp(
-        title: 'Alphabet Learning Game',
+        title: 'AlphaZed',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primaryColor: GameConfig.primaryButtonColor,
@@ -77,16 +60,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: Scaffold(
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: GameConfig.backgroundGradient,
-            ),
-            child: const SafeArea(
-              child: WelcomeScreen(),
-            ),
-          ),
-        ),
+        home: const SplashScreen(),
       ),
     );
   }
