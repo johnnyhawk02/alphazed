@@ -69,7 +69,7 @@ class _LetterButtonState extends State<LetterButton> {
   }
   
   Widget _buildLetterCircle(BuildContext context, {bool isForFeedback = false}) {
-    final double buttonSize = MediaQuery.of(context).size.width * 0.2;
+    final double buttonSize = MediaQuery.of(context).size.width * GameConfig.letterButtonSizeFactor;
     final double fontSize = buttonSize * 0.6;
     
     final bool isButtonActive = isForFeedback || widget.draggable;
@@ -88,7 +88,7 @@ class _LetterButtonState extends State<LetterButton> {
           child: showLetterText 
             ? Text(
                 widget.letter.toLowerCase(),
-                style: GameConfig.letterTextStyle.copyWith(
+                style: GameConfig.letterButtonTextStyle.copyWith(
                   fontSize: fontSize,
                   color: Colors.white,
                 ),
@@ -97,7 +97,7 @@ class _LetterButtonState extends State<LetterButton> {
                 opacity: 0.0,
                 child: Text(
                   widget.letter.toLowerCase(),
-                  style: GameConfig.letterTextStyle.copyWith(
+                  style: GameConfig.letterButtonTextStyle.copyWith(
                     fontSize: fontSize,
                   ),
                 ),
@@ -113,7 +113,7 @@ class _EmptyLetterCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double buttonSize = MediaQuery.of(context).size.width * 0.2;
+    final double buttonSize = MediaQuery.of(context).size.width * GameConfig.letterButtonSizeFactor;
     return Container(
       width: buttonSize,
       height: buttonSize,
