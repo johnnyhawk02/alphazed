@@ -1,99 +1,86 @@
 import 'package:flutter/material.dart';
 import '../config/game_config.dart';
-import '../mixins/interactive_animation_mixin.dart';
 
-class LetterButton extends StatefulWidget {
+class LetterButton extends StatelessWidget {
   final String letter;
   final VoidCallback onTap;
   final bool visible;
-  final ValueChanged<bool>? onDragSuccess;  // Add callback for successful drops
+  final bool colored;
+  final bool draggable;
+  final ValueChanged<bool>? onDragSuccess;
   
   const LetterButton({
     super.key,
     required this.letter,
     required this.onTap,
     this.visible = true,
+    this.colored = false,
+    this.draggable = false,
     this.onDragSuccess,
   });
 
   @override
-  State<LetterButton> createState() => _LetterButtonState();
-}
-
-class _LetterButtonState extends State<LetterButton> with TickerProviderStateMixin, InteractiveAnimationMixin {
-  bool _isDragging = false;
-  bool _isHidden = false;
-
-  @override
-  void initState() {
-    super.initState();
-    initializeAnimation(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-  }
-
-  @override
-  void dispose() {
-    animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (!widget.visible || _isHidden) {
-      return const SizedBox(
-        width: GameConfig.letterButtonSize,
-        height: GameConfig.letterButtonSize,
+    if (!visible) {
+      return SizedBox(
+        width: MediaQuery.of(context).size.width * 0.2, // 20% of screen width
+        height: MediaQuery.of(context).size.width * 0.2, // 20% of screen width
       );
     }
 
-    return Draggable<String>(
-      data: widget.letter,
-      onDragStarted: () {
-        setState(() => _isDragging = true);
-        animationController.forward();
-      },
-      onDragEnd: (details) {
-        setState(() {
-          _isDragging = false;
-          if (details.wasAccepted) {
-            _isHidden = true;
-            widget.onDragSuccess?.call(true);
-          }
-        });
-        animationController.reverse();
-      },
-      onDraggableCanceled: (_, __) => animationController.reverse(),
-      feedback: _buildLetterCircle(isForFeedback: true),
-      childWhenDragging: const Opacity(
-        opacity: 0.3,
-        child: _EmptyLetterCircle(),
-      ),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        onTapDown: (_) => animationController.forward(),
-        onTapUp: (_) => animationController.reverse(),
-        onTapCancel: () => animationController.reverse(),
-        child: ScaleTransition(
-          scale: scaleAnimation,
-          child: _buildLetterCircle(),
-        ),
-      ),
-    );
+    return draggable
+        ? Draggable<String>(
+            data: letter,
+            onDragEnd: (details) {
+              if (details.wasAccepted) {
+                onDragSuccess?.call(true);
+              }
+            },
+            feedback: _buildLetterCircle(context, isForFeedback: true),
+            childWhenDragging: const _EmptyLetterCircle(),
+            child: GestureDetector(
+              onTap: onTap, // Play letter sound
+              child: _buildLetterCircle(context),
+            ),
+          )
+        : GestureDetector(
+            onTap: onTap, // Play letter sound
+            child: _buildLetterCircle(context),
+          );
   }
 
-  Widget _buildLetterCircle({bool isForFeedback = false}) {
+  Widget _buildLetterCircle(BuildContext context, {bool isForFeedback = false}) {
+    final double buttonSize = MediaQuery.of(context).size.width * 0.2; // 20% of screen width
+    final double fontSize = buttonSize * 0.6; // Set font size to 60% of button size
+    
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: GameConfig.letterButtonSize,
-        height: GameConfig.letterButtonSize,
-        decoration: GameConfig.getLetterButtonDecoration(isActive: !_isDragging || isForFeedback),
+        width: buttonSize,
+        height: buttonSize,
+        decoration: GameConfig.getLetterButtonDecoration(
+          context, 
+          isActive: isForFeedback || colored
+        ),
         child: Center(
           child: Text(
-            widget.letter.toLowerCase(),
-            style: GameConfig.letterTextStyle,
+            letter.toLowerCase(),
+            style: colored 
+              ? GameConfig.letterTextStyle.copyWith(
+                  fontSize: fontSize,
+                  color: Colors.white,
+                )
+              : GameConfig.letterTextStyle.copyWith(
+                  fontSize: fontSize,
+                  color: Colors.transparent,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(1.0, 1.0),
+                      blurRadius: 3.0,
+                      color: Colors.white.withOpacity(0.3),
+                    ),
+                  ],
+                ),
           ),
         ),
       ),
@@ -106,10 +93,11 @@ class _EmptyLetterCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double buttonSize = MediaQuery.of(context).size.width * 0.2; // 20% of screen width
     return Container(
-      width: GameConfig.letterButtonSize,
-      height: GameConfig.letterButtonSize,
-      decoration: GameConfig.getLetterButtonDecoration(isActive: true),
+      width: buttonSize,
+      height: buttonSize,
+      decoration: GameConfig.getLetterButtonDecoration(context, isActive: false),
     );
   }
 }

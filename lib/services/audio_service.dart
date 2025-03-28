@@ -146,15 +146,28 @@ class AudioService {
   
   Future<void> _waitForCompletion(AudioPlayer player) async {
     try {
-      await player.playerStateStream.firstWhere(
-        (state) => state.processingState == ProcessingState.completed
-      );
+      // More reliable way to wait for audio completion
+      if (player.playing) {
+        // First wait for processing to complete
+        await player.playerStateStream.firstWhere(
+          (state) => state.processingState == ProcessingState.completed || 
+                    state.processingState == ProcessingState.idle
+        );
+        
+        // Small additional delay to ensure proper cleanup
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
     } catch (e) {
       // Error handling
+      print('Error waiting for audio completion: $e');
     }
   }
-
+  
   Future<void> waitForQuestionCompletion() async {
     await _waitForCompletion(_questionPlayer);
+  }
+  
+  Future<void> waitForLetterCompletion() async {
+    await _waitForCompletion(_letterPlayer);
   }
 }

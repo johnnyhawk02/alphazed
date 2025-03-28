@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class GameConfig {
-  // Animation durations
-  static const Duration letterRevealDelay = Duration(milliseconds: 1500);
+  // Duration placeholders (no longer used for animations)
   static const Duration dropAnimationDuration = Duration(milliseconds: 300);
   static const Duration fadeAnimationDuration = Duration(milliseconds: 500);
   
+  // Game timing constants
+  static const Duration betweenLettersDelay = Duration(milliseconds: 100);
+  static const Duration afterLettersDelay = Duration(milliseconds: 700);
+  static const Duration letterLoadDelay = Duration(milliseconds: 10);
+  static const Duration uiUpdateDelay = Duration(milliseconds: 500);
+  
   // Size constants
-  static const double letterButtonSize = 200.0;
-  static const double letterButtonRadius = 100.0;
   static const double imageHeight = 300.0;
   static const double letterSpacing = 30.0;
   static const double defaultPadding = 16.0;
@@ -45,7 +48,7 @@ class GameConfig {
     end: Alignment.bottomRight,
     colors: [
       primaryButtonColor,
-      primaryButtonColor.withAlpha((0.8 * 255).toInt()), // Replaced withOpacity
+      primaryButtonColor.withAlpha((0.8 * 255).toInt()),
     ],
   );
   
@@ -89,7 +92,7 @@ class GameConfig {
           end: Alignment.bottomRight,
           colors: [
             highlightColor,
-            highlightColor.withAlpha((0.8 * 255).toInt()), // Replaced withOpacity
+            highlightColor.withAlpha((0.8 * 255).toInt()),
           ],
         ) : 
         LinearGradient(
@@ -97,13 +100,13 @@ class GameConfig {
           end: Alignment.bottomRight,
           colors: [
             defaultBackgroundColor,
-            defaultBackgroundColor.withAlpha((0.9 * 255).toInt()), // Replaced withOpacity
+            defaultBackgroundColor.withAlpha((0.9 * 255).toInt()),
           ],
         ),
       borderRadius: BorderRadius.circular(defaultBorderRadius),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
+          color: Colors.black.withAlpha((0.05 * 255).toInt()),
           spreadRadius: 1,
           blurRadius: 5,
           offset: Offset(0, 4),
@@ -116,19 +119,22 @@ class GameConfig {
     );
   }
   
-  static BoxDecoration getLetterButtonDecoration({bool isActive = true}) {
+  static BoxDecoration getLetterButtonDecoration(BuildContext context, {bool isActive = true}) {
     return BoxDecoration(
-      gradient: isActive ? letterButtonGradient : null,
-      color: isActive ? null : Colors.grey.shade300,
-      borderRadius: BorderRadius.circular(letterButtonRadius),
-      boxShadow: isActive ? [
+      gradient: letterButtonGradient,
+      borderRadius: BorderRadius.circular(MediaQuery.of(context).size.width * 0.1),
+      boxShadow: [
         BoxShadow(
-          color: Colors.black.withAlpha((0.05 * 255).toInt()), // Subtle shadow
-          spreadRadius: 1,
-          blurRadius: 5,
-          offset: Offset(0, 4),
+          color: Colors.black.withAlpha((0.05 * 255).toInt()),
+          spreadRadius: isActive ? 2 : 1,
+          blurRadius: isActive ? 5 : 3, 
+          offset: Offset(0, isActive ? 4 : 2),
         ),
-      ] : null,
+      ],
+      border: Border.all(
+        color: primaryButtonColor.withAlpha((0.8 * 255).toInt()),
+        width: isActive ? 2 : 1,
+      ),
     );
   }
 }

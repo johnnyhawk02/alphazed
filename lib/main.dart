@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/splash_screen.dart';
 import 'services/audio_service.dart';
 import 'models/game_state.dart';
 import 'config/game_config.dart';
@@ -60,7 +59,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const SplashScreen(),
+        home: const WelcomeScreen(),
       ),
     );
   }

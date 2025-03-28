@@ -42,29 +42,20 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> {
     );
   }
 
-  @override
-  Widget buildLandscapeLayout(GameState gameState, AudioService audioService) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            key: targetContainerKey,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-              boxShadow: [],
-            ),
-            child: buildImageDropTarget(gameState, audioService),
-          ),
-        ),
-        SizedBox(width: GameConfig.letterSpacing),
-        Expanded(
-          child: buildLetterGrid(gameState, audioService),
-        ),
-      ],
-    );
-  }
-
   Widget buildImageDropTarget(GameState gameState, AudioService audioService) {
+    // If there's no image to show yet, return an empty container with the same size
+    if (!gameState.isImageVisible) {
+      return Container(
+        width: MediaQuery.of(context).size.width * 0.8,
+        height: MediaQuery.of(context).size.width * 0.6, // Maintain 4:3 aspect ratio
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(36.0),
+          color: Colors.transparent,
+        ),
+      );
+    }
+    
+    // If the image should be visible, show it immediately without fade-in
     return Hero(
       tag: 'game_image_${gameState.currentItem!.imagePath}',
       child: ImageDropTarget(
@@ -72,7 +63,6 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> {
         item: gameState.currentItem!,
         onLetterAccepted: (letter) async {
           if (letter.toLowerCase() != gameState.currentItem!.firstLetter.toLowerCase()) {
-            playWrongAnimation();
             await audioService.playIncorrect();
           }
         },
@@ -83,36 +73,48 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> {
   @override
   Widget buildLetterGrid(GameState gameState, AudioService audioService) {
     return Center(
-      child: Wrap(
-        spacing: GameConfig.letterSpacing,
-        runSpacing: GameConfig.letterSpacing,
-        alignment: WrapAlignment.center,
-        children: List.generate(
-          gameState.currentOptions.length,
-          (index) => AnimatedOpacity(
-            duration: GameConfig.fadeAnimationDuration,
-            opacity: index < gameState.visibleLetterCount && !gameState.isQuestionPlaying ? 1.0 : 0.0,
-            child: LetterButton(
-              key: ValueKey('letter_${gameState.currentOptions[index]}_$index'),
-              letter: gameState.currentOptions[index],
-              onTap: () => audioService.playLetter(gameState.currentOptions[index]),
-              visible: index < gameState.visibleLetterCount && !gameState.isQuestionPlaying,
-              onDragSuccess: (success) async {
-                if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
-                  playCelebrationAnimation();
-                  await Future.wait([
-                    audioService.playAudio('assets/audio/other/bell.mp3'),
-                    audioService.playCongratulations(),
-                  ]);
-                  
-                  if (mounted && context.mounted) {
-                    await mainController.reverse();
-                    gameState.nextImage();
-                    mainController.forward();
-                  }
-                }
-              },
-            ),
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width, // Use full width for a single line
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center, // Center the buttons horizontally
+          children: List.generate(
+            gameState.currentOptions.length, // Use actual number of options instead of hardcoded 3
+            (index) {
+              if (index < gameState.currentOptions.length) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.of(context).size.width * 0.05, // Make padding proportional to viewport size
+                  ),
+                  child: index < gameState.visibleLetterCount 
+                    ? LetterButton(
+                      key: ValueKey('letter_${gameState.currentOptions[index]}_$index'),
+                      letter: gameState.currentOptions[index],
+                      onTap: () => audioService.playLetter(gameState.currentOptions[index]),
+                      visible: true, // Always visible if we're rendering it
+                      colored: index < gameState.coloredLetterCount,
+                      draggable: gameState.lettersAreDraggable,
+                      onDragSuccess: (success) async {
+                        if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
+                          await Future.wait([
+                            audioService.playAudio('assets/audio/other/bell.mp3'),
+                            audioService.playCongratulations(),
+                          ]);
+                          
+                          if (mounted && context.mounted) {
+                            gameState.nextImage();
+                          }
+                        }
+                      },
+                    )
+                    : SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.2,
+                        height: MediaQuery.of(context).size.width * 0.2,
+                      ), // Empty space with same size as button
+                );
+              } else {
+                return const SizedBox(); // Placeholder for missing buttons
+              }
+            },
           ),
         ),
       ),
