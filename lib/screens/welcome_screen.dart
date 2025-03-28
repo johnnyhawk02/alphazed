@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/game_config.dart';
+import '../services/audio_service.dart';
 import 'letter_to_picture_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -16,6 +18,14 @@ class WelcomeScreen extends StatelessWidget {
           'Alphabet Learning',
           style: GameConfig.titleTextStyle,
         ),
+        actions: [
+          // Developer option button
+          IconButton(
+            icon: const Icon(Icons.developer_mode),
+            onPressed: () => _showDeveloperOptions(context),
+            tooltip: 'Developer Options',
+          ),
+        ],
       ),
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -108,6 +118,77 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDeveloperOptions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Developer Options'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDevOption(
+                context,
+                title: 'Clear Asset Caches',
+                description: 'Clear all audio and image caches to reload fresh assets',
+                icon: Icons.cleaning_services,
+                onTap: () async {
+                  Navigator.of(context).pop(); // Close the dialog
+                  
+                  // Show loading indicator
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Clearing asset caches...'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                  
+                  // Get AudioService from provider and clear caches
+                  final audioService = Provider.of<AudioService>(context, listen: false);
+                  await audioService.clearAssetCaches();
+                  
+                  // Show success message
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Asset caches cleared successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDevOption(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: GameConfig.primaryButtonColor),
+        title: Text(title),
+        subtitle: Text(description),
+        onTap: onTap,
       ),
     );
   }

@@ -31,6 +31,33 @@ class AudioService {
     _genericPlayer.dispose();
   }
   
+  /// Clears all audio player caches by stopping and resetting them
+  /// Call this method when you need to refresh loaded audio assets,
+  /// such as after generating new audio files.
+  Future<void> clearAssetCaches() async {
+    print('Clearing audio asset caches...');
+    
+    try {
+      // Stop all currently playing audio
+      await _wordPlayer.stop();
+      await _questionPlayer.stop();
+      await _letterPlayer.stop();
+      await _congratsPlayer.stop();
+      await _genericPlayer.stop();
+      
+      // Release all resources and reset the players
+      await _wordPlayer.stop();
+      await _questionPlayer.stop();
+      await _letterPlayer.stop();
+      await _congratsPlayer.stop();
+      await _genericPlayer.stop();
+      
+      print('Audio asset caches cleared successfully');
+    } catch (e) {
+      print('Error clearing audio asset caches: $e');
+    }
+  }
+  
   // Shared method for playing random audio from a directory
   Future<void> _playRandomAudioFromDirectory(String directory, AudioPlayer player) async {
     try {

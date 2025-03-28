@@ -117,25 +117,28 @@ class GameState extends ChangeNotifier {
     // Just update the UI state
     notifyListeners();
     
-    // Read and color each letter one by one
+    // First reveal each letter one by one, then play the audio
     for (int i = 0; i < currentOptions.length; i++) {
-      // Play the letter sound
+      // First color this letter (reveal it visually)
+      coloredLetterCount = i + 1;
+      notifyListeners();
+      
+      // Small delay to allow the user to see the newly revealed letter
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      // Then play the letter sound
       await audioService.playLetter(currentOptions[i]);
       
       // Wait for the letter sound to complete
       await audioService.waitForLetterCompletion();
       
-      // Now color this letter (after sound completes)
-      coloredLetterCount = i + 1;
-      notifyListeners();
-      
       // Wait before next letter
       if (i < currentOptions.length - 1) {
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 300));
       }
     }
     
-    // After all letters are colored, make them draggable
+    // After all letters are colored and sounds played, make them draggable
     await Future.delayed(const Duration(milliseconds: 700));
     lettersAreDraggable = true;
     notifyListeners();

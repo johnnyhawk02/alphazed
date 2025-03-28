@@ -25,6 +25,36 @@ const client = new textToSpeech.TextToSpeechClient();
 // --- Utility Functions ---
 
 /**
+ * Clears the audio asset caches by removing all files in the temp directory.
+ * @returns {Promise<boolean>} - True if cache was successfully cleared, false otherwise.
+ */
+async function clearAssetCaches() {
+  try {
+    const tempDir = await ensureTempDirectory();
+    const files = await fs.readdir(tempDir);
+    
+    console.log(`Clearing asset cache: Found ${files.length} temporary files to remove...`);
+    
+    let deletedCount = 0;
+    for (const file of files) {
+      const filePath = path.join(tempDir, file);
+      try {
+        await fs.unlink(filePath);
+        deletedCount++;
+      } catch (error) {
+        console.error(`Failed to delete temporary file ${filePath}:`, error.message);
+      }
+    }
+    
+    console.log(`Asset cache cleared: Removed ${deletedCount}/${files.length} temporary files.`);
+    return true;
+  } catch (error) {
+    console.error('Error clearing asset caches:', error);
+    return false;
+  }
+}
+
+/**
  * Checks if a directory exists.
  * @param {string} dirPath - The path to the directory.
  * @returns {Promise<boolean>} - True if the directory exists, false otherwise.

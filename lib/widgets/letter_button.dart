@@ -63,25 +63,24 @@ class LetterButton extends StatelessWidget {
           isActive: isForFeedback || colored
         ),
         child: Center(
-          child: Text(
-            letter.toLowerCase(),
-            style: colored 
-              ? GameConfig.letterTextStyle.copyWith(
+          // When inactive, don't render the Text widget at all
+          child: colored 
+            ? Text(
+                letter.toLowerCase(),
+                style: GameConfig.letterTextStyle.copyWith(
                   fontSize: fontSize,
                   color: Colors.white,
-                )
-              : GameConfig.letterTextStyle.copyWith(
-                  fontSize: fontSize,
-                  color: Colors.transparent,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(1.0, 1.0),
-                      blurRadius: 3.0,
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                  ],
                 ),
-          ),
+              )
+            : Opacity(
+                opacity: 0.0, // Force 0% opacity
+                child: Text(
+                  letter.toLowerCase(),
+                  style: GameConfig.letterTextStyle.copyWith(
+                    fontSize: fontSize,
+                  ),
+                ),
+              ),
         ),
       ),
     );
