@@ -33,6 +33,7 @@ class GameConfig {
   static final Color highlightBorderColor = Color(0xFF06D6A0); // Mint
   static final Color defaultBorderColor = Color(0xFFDEE2E6); // Light gray
   static final Color textColor = Color(0xFF2B2D42); // Dark blue-gray
+  static final Color inactiveButtonColor = Color(0xFFADB5BD); // Grey for inactive buttons
   
   static final LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -49,6 +50,15 @@ class GameConfig {
     colors: [
       primaryButtonColor,
       primaryButtonColor.withAlpha((0.8 * 255).toInt()),
+    ],
+  );
+  
+  static final LinearGradient inactiveButtonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      inactiveButtonColor,
+      inactiveButtonColor.withAlpha((0.8 * 255).toInt()),
     ],
   );
   
@@ -121,7 +131,7 @@ class GameConfig {
   
   static BoxDecoration getLetterButtonDecoration(BuildContext context, {bool isActive = true}) {
     return BoxDecoration(
-      gradient: letterButtonGradient,
+      gradient: isActive ? letterButtonGradient : inactiveButtonGradient,
       borderRadius: BorderRadius.circular(MediaQuery.of(context).size.width * 0.1),
       boxShadow: [
         BoxShadow(
@@ -132,7 +142,9 @@ class GameConfig {
         ),
       ],
       border: Border.all(
-        color: primaryButtonColor.withAlpha((0.8 * 255).toInt()),
+        color: isActive 
+            ? primaryButtonColor.withAlpha((0.8 * 255).toInt())
+            : inactiveButtonColor.withAlpha((0.8 * 255).toInt()),
         width: isActive ? 2 : 1,
       ),
     );

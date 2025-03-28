@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/game_config.dart';
 
-class LetterButton extends StatelessWidget {
+class LetterButton extends StatefulWidget {
   final String letter;
   final VoidCallback onTap;
   final bool visible;
@@ -18,40 +18,61 @@ class LetterButton extends StatelessWidget {
     this.draggable = false,
     this.onDragSuccess,
   });
+  
+  @override
+  State<LetterButton> createState() => _LetterButtonState();
+}
 
+class _LetterButtonState extends State<LetterButton> {
+  bool _wasSuccessfullyDragged = false;
+  
   @override
   Widget build(BuildContext context) {
-    if (!visible) {
+    if (!widget.visible) {
       return SizedBox(
         width: MediaQuery.of(context).size.width * 0.2, // 20% of screen width
         height: MediaQuery.of(context).size.width * 0.2, // 20% of screen width
       );
     }
-
-    return draggable
+    
+    // If the letter was successfully dragged before, always show the empty circle
+    if (_wasSuccessfullyDragged) {
+      return _EmptyLetterCircle();
+    }
+    
+    return widget.draggable
         ? Draggable<String>(
-            data: letter,
+            data: widget.letter,
             onDragEnd: (details) {
               if (details.wasAccepted) {
-                onDragSuccess?.call(true);
+                // Mark as successfully dragged and call the callback
+                setState(() {
+                  _wasSuccessfullyDragged = true;
+                });
+                widget.onDragSuccess?.call(true);
               }
             },
             feedback: _buildLetterCircle(context, isForFeedback: true),
             childWhenDragging: const _EmptyLetterCircle(),
             child: GestureDetector(
-              onTap: onTap, // Play letter sound
+              onTap: widget.onTap, // Play letter sound
               child: _buildLetterCircle(context),
             ),
           )
         : GestureDetector(
-            onTap: onTap, // Play letter sound
+            onTap: widget.onTap, // Play letter sound
             child: _buildLetterCircle(context),
           );
   }
-
+  
   Widget _buildLetterCircle(BuildContext context, {bool isForFeedback = false}) {
     final double buttonSize = MediaQuery.of(context).size.width * 0.2; // 20% of screen width
     final double fontSize = buttonSize * 0.6; // Set font size to 60% of button size
+    
+    // Show the letter text when colored (audio played), but only change to blue when draggable
+    // This way, letters appear on grey circles when audio plays, then turn blue when active
+    final bool isButtonActive = isForFeedback || widget.draggable;
+    final bool showLetterText = isForFeedback || widget.colored;
     
     return Material(
       color: Colors.transparent,
@@ -60,13 +81,12 @@ class LetterButton extends StatelessWidget {
         height: buttonSize,
         decoration: GameConfig.getLetterButtonDecoration(
           context, 
-          isActive: isForFeedback || colored
+          isActive: isButtonActive
         ),
         child: Center(
-          // When inactive, don't render the Text widget at all
-          child: colored 
+          child: showLetterText 
             ? Text(
-                letter.toLowerCase(),
+                widget.letter.toLowerCase(),
                 style: GameConfig.letterTextStyle.copyWith(
                   fontSize: fontSize,
                   color: Colors.white,
@@ -75,7 +95,7 @@ class LetterButton extends StatelessWidget {
             : Opacity(
                 opacity: 0.0, // Force 0% opacity
                 child: Text(
-                  letter.toLowerCase(),
+                  widget.letter.toLowerCase(),
                   style: GameConfig.letterTextStyle.copyWith(
                     fontSize: fontSize,
                   ),
