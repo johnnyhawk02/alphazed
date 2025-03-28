@@ -172,35 +172,34 @@ class GameState extends ChangeNotifier {
     // Prepare letter options for the next image
     currentOptions = gameItems[currentIndex].generateOptions(allLetters);
     
-    // First show only the letters (gray, not colored, not draggable)
+    // Reset state for the new item: letters visible but gray, image hidden
     visibleLetterCount = currentOptions.length;
     coloredLetterCount = 0;
     lettersAreDraggable = false;
     isQuestionPlaying = false;
     isImageVisible = false;  // Hide the image initially
     
-    // Update UI to show just letters
+    // Notify UI once to show the initial state (gray letters, no image)
     notifyListeners();
     
-    // Add multiple notifications to ensure all letters are loaded
-    await Future.delayed(const Duration(milliseconds: 100));
-    notifyListeners();
-    
-    // Another notification after a slightly longer delay
-    await Future.delayed(const Duration(milliseconds: 200));
-    notifyListeners();
-    
-    // Wait to ensure UI has updated with letters
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Now show the image
+    // Wait a consolidated delay for UI to settle and user to see letters
+    // Adjust duration as needed, combining previous delays
+    await Future.delayed(const Duration(milliseconds: 700)); 
+
+    // Now, check if the widget is still mounted before proceeding
+    // (Although GameState is usually long-lived, this is good practice)
+    // We assume GameState itself won't be disposed mid-operation, 
+    // but the UI listening might change.
+    // No direct 'mounted' check here, rely on listeners handling disposal.
+
+    // Show the image
     isImageVisible = true;
     notifyListeners();
     
-    // Wait to ensure image has appeared
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Wait briefly for image to appear visually before starting audio
+    await Future.delayed(const Duration(milliseconds: 300)); 
     
-    // Now start the audio sequence
+    // Start the audio sequence
     await playQuestionAndRevealLetters();
   }
   
