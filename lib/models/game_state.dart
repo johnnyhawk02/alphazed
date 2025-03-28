@@ -131,12 +131,12 @@ class GameState extends ChangeNotifier {
       
       // Wait before next letter
       if (i < currentOptions.length - 1) {
-        await Future.delayed(GameConfig.betweenLettersDelay);
+        await Future.delayed(const Duration(milliseconds: 500));
       }
     }
     
     // After all letters are colored, make them draggable
-    await Future.delayed(GameConfig.afterLettersDelay);
+    await Future.delayed(const Duration(milliseconds: 700));
     lettersAreDraggable = true;
     notifyListeners();
   }
@@ -166,18 +166,18 @@ class GameState extends ChangeNotifier {
     notifyListeners();
     
     // Add a second notification to ensure all letters are loaded
-    await Future.delayed(GameConfig.letterLoadDelay);
+    await Future.delayed(const Duration(milliseconds: 100));
     notifyListeners();
     
     // Wait to ensure UI has updated with letters
-    await Future.delayed(GameConfig.uiUpdateDelay);
+    await Future.delayed(const Duration(milliseconds: 500));
     
     // Now show the image
     isImageVisible = true;
     notifyListeners();
     
     // Wait to ensure image has appeared
-    await Future.delayed(GameConfig.uiUpdateDelay);
+    await Future.delayed(const Duration(milliseconds: 500));
     
     // Now start the audio sequence
     await playQuestionAndRevealLetters();

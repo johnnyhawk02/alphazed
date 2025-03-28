@@ -1,7 +1,6 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
-import 'dart:collection';
 import 'asset_loader.dart';
 
 typedef VoidCallback = void Function();
@@ -13,10 +12,6 @@ class AudioService {
   final AudioPlayer _congratsPlayer = AudioPlayer();
   final AudioPlayer _genericPlayer = AudioPlayer();
   
-  // Cache for preloaded letter sounds
-  final Map<String, AudioSource> _letterSoundsCache = HashMap<String, AudioSource>();
-  bool _letterSoundsLoaded = false;
-  
   VoidCallback? onCongratsStart;
   
   AudioService() {
@@ -26,49 +21,6 @@ class AudioService {
     _letterPlayer.setVolume(1.0);
     _congratsPlayer.setVolume(1.0);
     _genericPlayer.setVolume(1.0);
-    
-    // Preload letter sounds
-    preloadLetterSounds();
-  }
-  
-  // Preload all letter sounds into memory
-  Future<void> preloadLetterSounds() async {
-    if (_letterSoundsLoaded) return;
-    
-    try {
-      // Get all the letter sound files
-      final letterFiles = await AssetLoader.getAssets(
-        directory: 'audio/letters', 
-        extension: '.mp3'
-      );
-      
-      print('Preloading ${letterFiles.length} letter sounds...');
-      
-      // Create audio sources for each letter and store in cache
-      for (final file in letterFiles) {
-        final letterKey = _extractLetterFromPath(file);
-        if (letterKey.isNotEmpty) {
-          _letterSoundsCache[letterKey] = AudioSource.asset(file);
-          print('Preloaded sound for letter: $letterKey');
-        }
-      }
-      
-      _letterSoundsLoaded = true;
-      print('Letter sounds preloading complete. Cached ${_letterSoundsCache.length} sounds.');
-    } catch (e) {
-      print('Error preloading letter sounds: $e');
-    }
-  }
-  
-  // Extract letter key from file path
-  String _extractLetterFromPath(String path) {
-    // Extract filename from path (e.g., "a_.mp3" from "assets/audio/letters/a_.mp3")
-    final filename = path.split('/').last;
-    // Remove the underscore and extension to get the letter
-    if (filename.length >= 3 && filename.contains('_')) {
-      return filename.substring(0, 1).toLowerCase();
-    }
-    return '';
   }
   
   void dispose() {
@@ -133,25 +85,16 @@ class AudioService {
   
   Future<void> playLetter(String letter) async {
     await _safeAudioOperation('playLetter', () async {
-      final letterKey = letter.toLowerCase();
-      
-      // Use cached audio source if available
-      if (_letterSoundsCache.containsKey(letterKey)) {
-        print('Playing letter sound for $letter from cache');
-        await _letterPlayer.setAudioSource(_letterSoundsCache[letterKey]!);
+      // Append underscore to all letter file names
+      String audioPath = 'assets/audio/letters/${letter.toLowerCase()}_.mp3';
+      print('Attempting to play letter sound: $audioPath'); // Debug log
+
+      try {
+        await rootBundle.load(audioPath); // Check if audio exists
+        await _letterPlayer.setAsset(audioPath);
         await _letterPlayer.play();
-      } else {
-        // Fall back to loading from asset if not in cache
-        String audioPath = 'assets/audio/letters/${letterKey}_.mp3';
-        print('Cache miss. Attempting to play letter sound from path: $audioPath');
-        
-        try {
-          await rootBundle.load(audioPath); // Check if audio exists
-          await _letterPlayer.setAsset(audioPath);
-          await _letterPlayer.play();
-        } catch (e) {
-          print('Error playing letter sound for $letter: $e');
-        }
+      } catch (e) {
+        print('Error playing letter sound for $letter: $e'); // Error log
       }
     });
   }
