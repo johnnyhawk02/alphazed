@@ -153,7 +153,7 @@ class GameState extends ChangeNotifier {
   
   Future<void> nextImage() async {
     currentIndex = (currentIndex + 1) % gameItems.length;
-    questionVariation = random.nextInt(GameConfig.maxQuestionVariations) + 1;
+    questionVariation = 1; // Always use question variation 1
     
     // Prepare letter options for the next image
     currentOptions = gameItems[currentIndex].generateOptions(allLetters);

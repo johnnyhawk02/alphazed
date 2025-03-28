@@ -19,7 +19,7 @@ class GameConfig {
   static const double defaultBorderRadius = 16.0;
   
   // Text and font sizes
-  static const int maxQuestionVariations = 5;
+  static const int maxQuestionVariations = 1; // Changed from 5 to 1 to only use one question variation
   static const double letterFontSize = 120.0;
   static const double wordFontSize = 50.0;
   static const double titleFontSize = 22.0;

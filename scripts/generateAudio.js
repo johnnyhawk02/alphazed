@@ -382,18 +382,26 @@ async function generateAllAudio() {
     await processBatchAudio(supportDir, supportiveMessages, "support_", API_CALL_DELAY_MS, false);
 
     // --- Generate Question Variations for Each Successfully Processed Word ---
-    console.log("\nGenerating 'which letter does $word begin with?' prompts...");
-    const questionVariations = [
-      "Which letter does $word begin with?",
-      "Can you tell me the first letter of $word?",
-      "What letter starts the word $word?",
-      "Do you know the first letter of $word?",
-      "What is the starting letter of $word?"
-    ];
+    console.log("\nGenerating question prompt for words...");
+    const questionTemplate = "Which letter does $word begin with?"; // Using only one question variation
     console.log(`Generating questions for ${wordsSuccessfullyProcessed.size} words...`);
+    
     for (const baseName of wordsSuccessfullyProcessed) {
-        // Plain text questions, useSSML = false (handled within processQuestionVariations)
-        await processQuestionVariations(questionDir, baseName, questionVariations);
+        const questionText = questionTemplate.replace('$word', baseName);
+        const outputFilename = `${baseName}_question_1.${FINAL_AUDIO_FORMAT}`; // Always using variation #1
+        const outputPath = path.join(questionDir, outputFilename);
+        
+        if (!(await directoryExists(outputPath))) {
+          console.log(`Processing: Question for ${baseName}`);
+          const success = await generateAudioFile(questionText, outputPath, false); // Questions are plain text
+          if(success) {
+              await new Promise(resolve => setTimeout(resolve, API_CALL_DELAY_MS));
+          } else {
+              console.warn(`Skipping delay for question ${outputFilename} due to processing error.`);
+          }
+        } else {
+          console.log(`Skipping ${outputFilename} - already exists`);
+        }
     }
 
     // --- Generate Letter Sounds using SSML ---

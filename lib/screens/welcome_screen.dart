@@ -162,6 +162,36 @@ class WelcomeScreen extends StatelessWidget {
                   );
                 },
               ),
+              _buildDevOption(
+                context,
+                title: 'Clear Sound Caches Only',
+                description: 'Clear only audio assets to reload fresh sounds',
+                icon: Icons.music_note,
+                onTap: () async {
+                  Navigator.of(context).pop(); // Close the dialog
+                  
+                  // Show loading indicator
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Clearing sound caches...'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                  
+                  // Get AudioService from provider and clear sound caches
+                  final audioService = Provider.of<AudioService>(context, listen: false);
+                  await audioService.clearSoundCaches();
+                  
+                  // Show success message
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Sound caches cleared successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),

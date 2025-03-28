@@ -58,6 +58,45 @@ class AudioService {
     }
   }
   
+  /// Clears only audio player caches by stopping and resetting them
+  /// This method is specifically for refreshing sound assets without affecting other caches
+  Future<void> clearSoundCaches() async {
+    print('Clearing sound caches...');
+    
+    try {
+      // Stop all currently playing audio
+      await _wordPlayer.stop();
+      await _questionPlayer.stop();
+      await _letterPlayer.stop();
+      await _congratsPlayer.stop();
+      await _genericPlayer.stop();
+      
+      // Force release all audio resources
+      // This is more effective than just stop() as it clears internal buffers
+      await Future.wait([
+        _wordPlayer.pause().then((_) => _wordPlayer.seek(Duration.zero)),
+        _questionPlayer.pause().then((_) => _questionPlayer.seek(Duration.zero)),
+        _letterPlayer.pause().then((_) => _letterPlayer.seek(Duration.zero)),
+        _congratsPlayer.pause().then((_) => _congratsPlayer.seek(Duration.zero)),
+        _genericPlayer.pause().then((_) => _genericPlayer.seek(Duration.zero)),
+      ]);
+      
+      // Clear the audio cache in just_audio by setting a dummy asset then stopping
+      final dummyPath = 'assets/audio/other/correct.mp3';
+      try {
+        await _genericPlayer.setAsset(dummyPath);
+        await _genericPlayer.stop();
+      } catch (e) {
+        // Ignore errors if the dummy asset doesn't exist
+        print('Note: Could not load dummy asset for cache clearing');
+      }
+      
+      print('Sound caches cleared successfully');
+    } catch (e) {
+      print('Error clearing sound caches: $e');
+    }
+  }
+  
   // Shared method for playing random audio from a directory
   Future<void> _playRandomAudioFromDirectory(String directory, AudioPlayer player) async {
     try {
