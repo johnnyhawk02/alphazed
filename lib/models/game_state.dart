@@ -117,6 +117,10 @@ class GameState extends ChangeNotifier {
     // Just update the UI state
     notifyListeners();
     
+    // Add a small delay and force another update to ensure letters are visible
+    await Future.delayed(const Duration(milliseconds: 100));
+    notifyListeners();
+    
     // First reveal each letter one by one, then play the audio
     for (int i = 0; i < currentOptions.length; i++) {
       // First color this letter (reveal it visually)
@@ -124,7 +128,13 @@ class GameState extends ChangeNotifier {
       notifyListeners();
       
       // Small delay to allow the user to see the newly revealed letter
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Increasing the delay for the first letter to ensure it appears
+      await Future.delayed(Duration(milliseconds: i == 0 ? 500 : 200));
+      
+      // Force MULTIPLE updates to ensure the letter text is visible
+      notifyListeners();
+      await Future.delayed(const Duration(milliseconds: 50));
+      notifyListeners();
       
       // Then play the letter sound
       await audioService.playLetter(currentOptions[i]);
@@ -141,6 +151,10 @@ class GameState extends ChangeNotifier {
     // After all letters are colored and sounds played, make them draggable
     await Future.delayed(const Duration(milliseconds: 700));
     lettersAreDraggable = true;
+    notifyListeners();
+    
+    // Final update to ensure all letters are properly visible and draggable
+    await Future.delayed(const Duration(milliseconds: 100));
     notifyListeners();
   }
   
@@ -168,8 +182,12 @@ class GameState extends ChangeNotifier {
     // Update UI to show just letters
     notifyListeners();
     
-    // Add a second notification to ensure all letters are loaded
+    // Add multiple notifications to ensure all letters are loaded
     await Future.delayed(const Duration(milliseconds: 100));
+    notifyListeners();
+    
+    // Another notification after a slightly longer delay
+    await Future.delayed(const Duration(milliseconds: 200));
     notifyListeners();
     
     // Wait to ensure UI has updated with letters

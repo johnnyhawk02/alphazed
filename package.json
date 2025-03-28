@@ -25,6 +25,7 @@
   "homepage": "https://github.com/johnnyhawk02/alphazed#readme",
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.0.1",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "sharp": "^0.33.5"
   }
 }

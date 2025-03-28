@@ -7,10 +7,10 @@ class GameConfig {
   static const Duration fadeAnimationDuration = Duration(milliseconds: 500);
   
   // Game timing constants
-  static const Duration betweenLettersDelay = Duration(milliseconds: 100);
+  static const Duration betweenLettersDelay = Duration(milliseconds: 20);
   static const Duration afterLettersDelay = Duration(milliseconds: 700);
-  static const Duration letterLoadDelay = Duration(milliseconds: 10);
-  static const Duration uiUpdateDelay = Duration(milliseconds: 500);
+  static const Duration letterLoadDelay = Duration(milliseconds: 1000);
+  static const Duration uiUpdateDelay = Duration(milliseconds: 1000);
   
   // Size constants
   static const double imageHeight = 300.0;
@@ -20,9 +20,11 @@ class GameConfig {
   
   // Text and font sizes
   static const int maxQuestionVariations = 1; // Changed from 5 to 1 to only use one question variation
-  static const double letterFontSize = 120.0;
+  static const double letterFontSize = 180.0;
+  static const double correctLetterFontSize = 300.0; // New font size for correct letters
   static const double wordFontSize = 50.0;
-  static const double titleFontSize = 22.0;
+  static const double imageDropWordFontSize = 150.0; // New font size for word display in image drop target
+  static const double titleFontSize = 25.0;
   static const double bodyTextFontSize = 18.0;
   
   // Colors

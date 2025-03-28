@@ -98,7 +98,7 @@ abstract class BaseGameScreenState<T extends BaseGameScreen> extends State<T>
       builder: (context, orientation) {
         return Scaffold(
           appBar: buildGameAppBar(),
-          backgroundColor: Colors.transparent,
+          backgroundColor: GameConfig.defaultBackgroundColor,
           body: Consumer2<GameState, AudioService>(
             builder: (context, gameState, audioService, _) {
               if (gameState.currentItem == null) {

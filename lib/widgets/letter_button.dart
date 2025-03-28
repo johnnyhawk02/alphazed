@@ -28,16 +28,20 @@ class _LetterButtonState extends State<LetterButton> {
   
   @override
   Widget build(BuildContext context) {
+    // Always create the button container, even if not visible
+    final buttonWidget = _buildLetterCircle(context);
+    
     if (!widget.visible) {
-      return SizedBox(
-        width: MediaQuery.of(context).size.width * 0.2, // 20% of screen width
-        height: MediaQuery.of(context).size.width * 0.2, // 20% of screen width
+      // Instead of returning an empty SizedBox, return a transparent button
+      return Opacity(
+        opacity: 0,
+        child: buttonWidget,
       );
     }
     
     // If the letter was successfully dragged before, always show the empty circle
     if (_wasSuccessfullyDragged) {
-      return _EmptyLetterCircle();
+      return const _EmptyLetterCircle();
     }
     
     return widget.draggable
@@ -45,7 +49,6 @@ class _LetterButtonState extends State<LetterButton> {
             data: widget.letter,
             onDragEnd: (details) {
               if (details.wasAccepted) {
-                // Mark as successfully dragged and call the callback
                 setState(() {
                   _wasSuccessfullyDragged = true;
                 });
@@ -55,22 +58,20 @@ class _LetterButtonState extends State<LetterButton> {
             feedback: _buildLetterCircle(context, isForFeedback: true),
             childWhenDragging: const _EmptyLetterCircle(),
             child: GestureDetector(
-              onTap: widget.onTap, // Play letter sound
-              child: _buildLetterCircle(context),
+              onTap: widget.onTap,
+              child: buttonWidget,
             ),
           )
         : GestureDetector(
-            onTap: widget.onTap, // Play letter sound
-            child: _buildLetterCircle(context),
+            onTap: widget.onTap,
+            child: buttonWidget,
           );
   }
   
   Widget _buildLetterCircle(BuildContext context, {bool isForFeedback = false}) {
-    final double buttonSize = MediaQuery.of(context).size.width * 0.2; // 20% of screen width
-    final double fontSize = buttonSize * 0.6; // Set font size to 60% of button size
+    final double buttonSize = MediaQuery.of(context).size.width * 0.2;
+    final double fontSize = buttonSize * 0.6;
     
-    // Show the letter text when colored (audio played), but only change to blue when draggable
-    // This way, letters appear on grey circles when audio plays, then turn blue when active
     final bool isButtonActive = isForFeedback || widget.draggable;
     final bool showLetterText = isForFeedback || widget.colored;
     
@@ -93,7 +94,7 @@ class _LetterButtonState extends State<LetterButton> {
                 ),
               )
             : Opacity(
-                opacity: 0.0, // Force 0% opacity
+                opacity: 0.0,
                 child: Text(
                   widget.letter.toLowerCase(),
                   style: GameConfig.letterTextStyle.copyWith(
@@ -112,7 +113,7 @@ class _EmptyLetterCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double buttonSize = MediaQuery.of(context).size.width * 0.2; // 20% of screen width
+    final double buttonSize = MediaQuery.of(context).size.width * 0.2;
     return Container(
       width: buttonSize,
       height: buttonSize,

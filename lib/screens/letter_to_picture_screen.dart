@@ -63,7 +63,8 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> {
         item: gameState.currentItem!,
         onLetterAccepted: (letter) async {
           if (letter.toLowerCase() != gameState.currentItem!.firstLetter.toLowerCase()) {
-            await audioService.playIncorrect();
+            // Play the incorrect sound (the image flashing is now handled by the ImageDropTarget)
+            audioService.playIncorrect();
           }
         },
       ),

@@ -19,6 +19,7 @@ dependencies:
   google_fonts: ^6.1.0
   confetti: ^0.7.0
   cupertino_icons: ^1.0.8
+  flutter_tts: ^3.8.5
 
 dev_dependencies:
   flutter_test:
