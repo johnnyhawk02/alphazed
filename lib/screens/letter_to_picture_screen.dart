@@ -210,8 +210,20 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
                             audioService.playCongratulations(),
                           ]);
                           
-                          if (mounted && context.mounted) {
-                            gameState.nextImage();
+                          // Ensure widget is still mounted before proceeding
+                          if (mounted) {
+                            // Call nextImage and get the path for the *next* image
+                            final String? nextImagePath = await gameState.nextImage();
+
+                            // Precache the next image if a path was returned
+                            if (nextImagePath != null && context.mounted) { // Check context.mounted again
+                              // Use try-catch just in case precaching fails
+                              try {
+                                await precacheImage(AssetImage(nextImagePath), context);
+                              } catch (e) {
+                                print("Failed to precache image: $nextImagePath, Error: $e");
+                              }
+                            }
                           }
                         }
                       },

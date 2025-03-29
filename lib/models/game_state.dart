@@ -4,6 +4,7 @@ import '../models/game_item.dart';
 import '../services/audio_service.dart';
 import '../services/asset_loader.dart';
 import '../config/game_config.dart';
+import 'package:flutter/widgets.dart';
 
 class GameState extends ChangeNotifier {
   final AudioService audioService;
@@ -44,28 +45,18 @@ class GameState extends ChangeNotifier {
       // First, prepare letter options
       currentOptions = gameItems[currentIndex].generateOptions(allLetters);
       
-      // Show letters first (gray, not draggable)
+      // Reset state: Show letters (gray), show image frame, not draggable
       visibleLetterCount = currentOptions.length;
       coloredLetterCount = 0;
       lettersAreDraggable = false;
       isQuestionPlaying = false;
+      isImageVisible = true; // Show image frame immediately
       
-      // Update UI to show just the gray letter buttons (image will be hidden)
+      // Update UI once to show gray letters and image frame
       notifyListeners();
       
-      // First refresh: Add a second notification to ensure all letters are loaded
-      await Future.delayed(GameConfig.letterLoadDelay);
-      notifyListeners();
-      
-      // Wait to ensure UI has updated with letters
-      await Future.delayed(GameConfig.uiUpdateDelay);
-      
-      // Signal to show the image now
-      isImageVisible = true;
-      notifyListeners();
-      
-      // Wait to ensure image has appeared
-      await Future.delayed(GameConfig.uiUpdateDelay);
+      // Short delay for UI to build before starting audio sequence
+      await Future.delayed(const Duration(milliseconds: 300)); 
       
       // Now start the audio sequence
       await playQuestionAndRevealLetters();
@@ -108,53 +99,34 @@ class GameState extends ChangeNotifier {
   }
   
   Future<void> revealLettersSequentially() async {
-    // We won't reset visibility - keep letters visible
+    // Ensure letters are visible but not colored/draggable initially
     isQuestionPlaying = false;
     coloredLetterCount = 0;
     lettersAreDraggable = false;
-    
-    // Letters are already visible, no need to set visibleLetterCount again
-    // Just update the UI state
-    notifyListeners();
-    
-    // Add a small delay and force another update to ensure letters are visible
-    await Future.delayed(const Duration(milliseconds: 100));
-    notifyListeners();
-    
-    // First reveal each letter one by one, then play the audio
+    notifyListeners(); // Update UI to show gray letters
+
+    // Allow a brief moment for the initial state to render
+    await Future.delayed(const Duration(milliseconds: 50));
+
     for (int i = 0; i < currentOptions.length; i++) {
-      // First color this letter (reveal it visually)
+      // Color the current letter
       coloredLetterCount = i + 1;
       notifyListeners();
       
-      // Small delay to allow the user to see the newly revealed letter
-      // Increasing the delay for the first letter to ensure it appears
-      await Future.delayed(Duration(milliseconds: i == 0 ? 500 : 200));
-      
-      // Force MULTIPLE updates to ensure the letter text is visible
-      notifyListeners();
-      await Future.delayed(const Duration(milliseconds: 50));
-      notifyListeners();
-      
-      // Then play the letter sound
+      // Play the letter sound
       await audioService.playLetter(currentOptions[i]);
-      
-      // Wait for the letter sound to complete
       await audioService.waitForLetterCompletion();
-      
-      // Wait before next letter
+
+      // Wait 1 second before revealing the next letter (if any)
       if (i < currentOptions.length - 1) {
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(const Duration(seconds: 1));
       }
     }
     
-    // After all letters are colored and sounds played, make them draggable
-    await Future.delayed(const Duration(milliseconds: 700));
+    // After all letters are revealed and sounds played, make them draggable
+    // Add a small delay before making them draggable for better UX
+    await Future.delayed(const Duration(milliseconds: 300)); 
     lettersAreDraggable = true;
-    notifyListeners();
-    
-    // Final update to ensure all letters are properly visible and draggable
-    await Future.delayed(const Duration(milliseconds: 100));
     notifyListeners();
   }
   
@@ -165,42 +137,37 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
   
-  Future<void> nextImage() async {
+  Future<String?> nextImage() async {
+    if (gameItems.isEmpty) return null;
+
     currentIndex = (currentIndex + 1) % gameItems.length;
     questionVariation = 1; // Always use question variation 1
-    
-    // Prepare letter options for the next image
+
+    // Calculate the index of the *next* image to precache
+    final int nextIndex = (currentIndex + 1) % gameItems.length;
+    final String? nextImagePath = gameItems.length > 1 ? gameItems[nextIndex].imagePath : null;
+
+    // Prepare letter options for the *current* next image
     currentOptions = gameItems[currentIndex].generateOptions(allLetters);
-    
-    // Reset state for the new item: letters visible but gray, image hidden
+
+    // Reset state: Show letters (gray), show new image frame, not draggable
     visibleLetterCount = currentOptions.length;
     coloredLetterCount = 0;
     lettersAreDraggable = false;
     isQuestionPlaying = false;
-    isImageVisible = false;  // Hide the image initially
-    
-    // Notify UI once to show the initial state (gray letters, no image)
-    notifyListeners();
-    
-    // Wait a consolidated delay for UI to settle and user to see letters
-    // Adjust duration as needed, combining previous delays
-    await Future.delayed(const Duration(milliseconds: 700)); 
+    isImageVisible = true; // Show image frame immediately
 
-    // Now, check if the widget is still mounted before proceeding
-    // (Although GameState is usually long-lived, this is good practice)
-    // We assume GameState itself won't be disposed mid-operation, 
-    // but the UI listening might change.
-    // No direct 'mounted' check here, rely on listeners handling disposal.
-
-    // Show the image
-    isImageVisible = true;
+    // Update UI once to show gray letters and new image frame
     notifyListeners();
-    
-    // Wait briefly for image to appear visually before starting audio
+
+    // Short delay for UI to build before starting audio sequence
     await Future.delayed(const Duration(milliseconds: 300)); 
-    
-    // Start the audio sequence
-    await playQuestionAndRevealLetters();
+
+    // Start the audio sequence for the new item
+    playQuestionAndRevealLetters(); // Keep this non-awaited for precaching
+
+    // Return the path for the *next* image so the UI layer can precache it
+    return nextImagePath; 
   }
   
   @override
