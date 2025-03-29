@@ -7,8 +7,31 @@ import 'models/game_state.dart';
 import 'services/audio_service.dart';
 import 'package:provider/provider.dart';
 
+// This ensures the app displays immediately
+Future<void> precacheAssets(BuildContext context) async {
+  // Preload key images to avoid initial load delays
+  try {
+    await precacheImage(const AssetImage('assets/icons/app_logo.png'), context);
+    await precacheImage(const AssetImage('assets/icons/splash_icon.png'), context);
+  } catch (e) {
+    // Ignore errors, we'll continue anyway
+    debugPrint('Error precaching assets: $e');
+  }
+}
+
 void main() async {
+  // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set system UI to be compatible with splash screen
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
   
   // Create assets directory if it doesn't exist
   try {
@@ -64,6 +87,11 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
+        builder: (context, child) {
+          // Preload assets as soon as the app starts
+          precacheAssets(context);
+          return child!;
+        },
         // Custom page route to disable back button animations
         onGenerateRoute: (RouteSettings settings) {
           if (settings.name == '/icon_generator') {

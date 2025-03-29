@@ -82,3 +82,13 @@ flutter_native_splash:
   
   web: false
   fullscreen: true
+  
+  # Reduce splash screen duration to minimize white screen perception
+  android_gravity: center
+  ios_content_mode: center
+  android_screen_orientation: portrait
+  
+  # Keep splash screen longer until the app is fully loaded
+  # This prevents the white screen from appearing
+  branding: assets/icons/app_logo.png
+  branding_mode: bottom

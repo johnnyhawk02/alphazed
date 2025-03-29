@@ -23,6 +23,10 @@ class GameState extends ChangeNotifier {
   bool _isLoading = true;
   bool get isLoading => _isLoading;
   
+  // Add a new property to control whether game has fully started
+  bool _gameStarted = false;
+  bool get gameStarted => _gameStarted;
+  
   GameItem? get currentItem => gameItems.isEmpty ? null : gameItems[currentIndex];
   
   GameState({required this.audioService}) {
@@ -56,7 +60,7 @@ class GameState extends ChangeNotifier {
         coloredLetterCount = 0;
         lettersAreDraggable = false;
         isQuestionPlaying = false;
-        isImageVisible = true;
+        isImageVisible = false; // Keep image hidden until game starts
       } else {
         currentOptions = [];
         visibleLetterCount = 0;
@@ -66,8 +70,9 @@ class GameState extends ChangeNotifier {
         isImageVisible = false;
       }
       
-      await Future.delayed(const Duration(milliseconds: 300)); 
-      await playQuestionAndRevealLetters();
+      // Remove automatic playback - we'll start this only when the user taps to start
+      // await Future.delayed(const Duration(milliseconds: 300)); 
+      // await playQuestionAndRevealLetters();
     } catch (e) {
       print("Error loading game items: $e");
       _loadDefaultItems();
@@ -166,6 +171,18 @@ class GameState extends ChangeNotifier {
     playQuestionAndRevealLetters();
 
     return nextImagePath; 
+  }
+  
+  // New method to start the game only when user is ready
+  Future<void> startGame() async {
+    if (_gameStarted) return; // Don't start twice
+    
+    _gameStarted = true;
+    isImageVisible = true; // Now show the image
+    notifyListeners();
+    
+    await Future.delayed(const Duration(milliseconds: 300));
+    await playQuestionAndRevealLetters();
   }
   
   @override
