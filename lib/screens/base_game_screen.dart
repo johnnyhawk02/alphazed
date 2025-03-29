@@ -4,31 +4,6 @@ import '../config/game_config.dart';
 import '../models/game_state.dart';
 import '../services/audio_service.dart';
 
-// Common back button painter
-class ArrowPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    
-    final centerY = size.height / 2;
-    final arrowWidth = size.width * 1.5;
-    
-    final path = Path()
-      ..moveTo(size.width * 0.95, centerY - arrowWidth / 2)
-      ..lineTo(size.width * 0.05, centerY)
-      ..lineTo(size.width * 0.95, centerY + arrowWidth / 2);
-    canvas.drawPath(path, paint);
-  }
-  
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 abstract class BaseGameScreen extends StatefulWidget {
   final String title;
   
@@ -62,28 +37,14 @@ abstract class BaseGameScreenState<T extends BaseGameScreen> extends State<T>
   Widget buildPortraitLayout(GameState gameState, AudioService audioService);
   Widget buildLetterGrid(GameState gameState, AudioService audioService);
 
-  // Common app bar with back button
+  // Common app bar without back button
   PreferredSizeWidget buildGameAppBar() {
     return AppBar(
       elevation: 1,
       backgroundColor: Colors.transparent,
       centerTitle: true,
       toolbarHeight: 70,
-      leading: GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: Container(
-          margin: EdgeInsets.all(8),
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: CustomPaint(
-            size: Size.infinite,
-            painter: ArrowPainter(),
-          ),
-        ),
-      ),
+      automaticallyImplyLeading: false, // Disable back button
       title: Text(
         (widget as BaseGameScreen).title,
         style: GameConfig.titleTextStyle,

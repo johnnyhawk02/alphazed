@@ -76,6 +76,26 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               _buildDevOption(
                 context,
+                title: 'Generate App Icons',
+                description: 'Create launcher icons and splash screen',
+                icon: Icons.image,
+                onTap: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                  
+                  // Navigate to the icon generator screen
+                  Navigator.of(context).pushNamed('/icon_generator');
+                  
+                  // Show a message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Generating app icons and splash screen...'),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                },
+              ),
+              _buildDevOption(
+                context,
                 title: 'Clear Asset Caches',
                 description: 'Clear all audio and image caches to reload fresh assets',
                 icon: Icons.cleaning_services,

@@ -20,6 +20,8 @@ class GameState extends ChangeNotifier {
   bool lettersAreDraggable = false;
   bool isImageVisible = false;
   List<String> currentOptions = [];
+  bool _isLoading = true;
+  bool get isLoading => _isLoading;
   
   GameItem? get currentItem => gameItems.isEmpty ? null : gameItems[currentIndex];
   
@@ -28,6 +30,10 @@ class GameState extends ChangeNotifier {
   }
   
   Future<void> loadGameItems() async {
+    if (!_isLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
     try {
       final imageFiles = await AssetLoader.getAssets(
         directory: 'images',
@@ -36,32 +42,43 @@ class GameState extends ChangeNotifier {
       
       if (imageFiles.isEmpty) {
         _loadDefaultItems();
-        return;
+        if (gameItems.isEmpty) {
+           print("Error: No game items loaded, including defaults.");
+        }
       }
       
       gameItems = imageFiles.map((path) => GameItem.fromImagePath(path)).toList();
       gameItems.shuffle(random);
       
-      // First, prepare letter options
-      currentOptions = gameItems[currentIndex].generateOptions(allLetters);
+      if (gameItems.isNotEmpty) {
+        currentOptions = gameItems[currentIndex].generateOptions(allLetters);
+        visibleLetterCount = currentOptions.length;
+        coloredLetterCount = 0;
+        lettersAreDraggable = false;
+        isQuestionPlaying = false;
+        isImageVisible = true;
+      } else {
+        currentOptions = [];
+        visibleLetterCount = 0;
+        coloredLetterCount = 0;
+        lettersAreDraggable = false;
+        isQuestionPlaying = false;
+        isImageVisible = false;
+      }
       
-      // Reset state: Show letters (gray), show image frame, not draggable
-      visibleLetterCount = currentOptions.length;
-      coloredLetterCount = 0;
-      lettersAreDraggable = false;
-      isQuestionPlaying = false;
-      isImageVisible = true; // Show image frame immediately
-      
-      // Update UI once to show gray letters and image frame
-      notifyListeners();
-      
-      // Short delay for UI to build before starting audio sequence
       await Future.delayed(const Duration(milliseconds: 300)); 
-      
-      // Now start the audio sequence
       await playQuestionAndRevealLetters();
     } catch (e) {
+      print("Error loading game items: $e");
       _loadDefaultItems();
+      if (gameItems.isNotEmpty) {
+         currentOptions = gameItems[currentIndex].generateOptions(allLetters);
+      } else {
+        currentOptions = [];
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
@@ -79,52 +96,40 @@ class GameState extends ChangeNotifier {
   Future<void> playQuestionAndRevealLetters() async {
     if (gameItems.isEmpty) return;
     
-    // Don't reset the letter visibility state here - they're already visible
-    // Just signal that the question is playing
     isQuestionPlaying = true;
     notifyListeners();
     
     try {
-      // Play the question audio
       String wordName = currentItem!.word;
       await audioService.playQuestion(wordName, questionVariation);
       await audioService.waitForQuestionCompletion();
       
-      // After question completes, start revealing letters with color
       await revealLettersSequentially();
     } catch (e) {
-      // Fallback in case of error
       await revealLettersSequentially();
     }
   }
   
   Future<void> revealLettersSequentially() async {
-    // Ensure letters are visible but not colored/draggable initially
     isQuestionPlaying = false;
     coloredLetterCount = 0;
     lettersAreDraggable = false;
-    notifyListeners(); // Update UI to show gray letters
+    notifyListeners();
 
-    // Allow a brief moment for the initial state to render
     await Future.delayed(const Duration(milliseconds: 50));
 
     for (int i = 0; i < currentOptions.length; i++) {
-      // Color the current letter
       coloredLetterCount = i + 1;
       notifyListeners();
       
-      // Play the letter sound
       await audioService.playLetter(currentOptions[i]);
       await audioService.waitForLetterCompletion();
 
-      // Wait 1 second before revealing the next letter (if any)
       if (i < currentOptions.length - 1) {
         await Future.delayed(const Duration(seconds: 1));
       }
     }
     
-    // After all letters are revealed and sounds played, make them draggable
-    // Add a small delay before making them draggable for better UX
     await Future.delayed(const Duration(milliseconds: 300)); 
     lettersAreDraggable = true;
     notifyListeners();
@@ -141,32 +146,25 @@ class GameState extends ChangeNotifier {
     if (gameItems.isEmpty) return null;
 
     currentIndex = (currentIndex + 1) % gameItems.length;
-    questionVariation = 1; // Always use question variation 1
+    questionVariation = 1;
 
-    // Calculate the index of the *next* image to precache
     final int nextIndex = (currentIndex + 1) % gameItems.length;
     final String? nextImagePath = gameItems.length > 1 ? gameItems[nextIndex].imagePath : null;
 
-    // Prepare letter options for the *current* next image
     currentOptions = gameItems[currentIndex].generateOptions(allLetters);
 
-    // Reset state: Show letters (gray), show new image frame, not draggable
     visibleLetterCount = currentOptions.length;
     coloredLetterCount = 0;
     lettersAreDraggable = false;
     isQuestionPlaying = false;
-    isImageVisible = true; // Show image frame immediately
+    isImageVisible = true;
 
-    // Update UI once to show gray letters and new image frame
     notifyListeners();
 
-    // Short delay for UI to build before starting audio sequence
     await Future.delayed(const Duration(milliseconds: 300)); 
 
-    // Start the audio sequence for the new item
-    playQuestionAndRevealLetters(); // Keep this non-awaited for precaching
+    playQuestionAndRevealLetters();
 
-    // Return the path for the *next* image so the UI layer can precache it
     return nextImagePath; 
   }
   
