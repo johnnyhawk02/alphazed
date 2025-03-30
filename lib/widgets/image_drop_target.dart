@@ -25,8 +25,6 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
   
   bool isHovering = false;
   String? correctLetter;
-  bool showWord = false;
-  bool isPressed = false;
   
   // Audio service for playing word sounds
   final AudioService _audioService = AudioService();
@@ -40,41 +38,6 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
   void dispose() {
     _audioService.dispose();
     super.dispose();
-  }
-
-  // Handle press down
-  void _handleTapDown(TapDownDetails details) async {
-    setState(() {
-      isPressed = true;
-      showWord = true;
-    });
-    
-    // Play the word audio immediately on press
-    await _audioService.playWord(widget.item.word);
-  }
-
-  // Handle press up
-  void _handleTapUp(TapUpDetails details) {
-    setState(() {
-      isPressed = false;
-    });
-    
-    // Keep word visible for 1 second after release
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          showWord = false;
-        });
-      }
-    });
-  }
-
-  // Handle tap cancel
-  void _handleTapCancel() {
-    setState(() {
-      isPressed = false;
-      showWord = false;
-    });
   }
   
   // Build the hover indicator
@@ -134,74 +97,32 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
                 widget.onLetterAccepted(data.data);
               },
               builder: (context, candidateData, rejectedData) {
-                return GestureDetector(
-                  onTapDown: _handleTapDown,
-                  onTapUp: _handleTapUp,
-                  onTapCancel: _handleTapCancel,
-                  child: Container(
-                    width: availableWidth,
-                    height: containerHeight,
-                    // Remove padding to allow image to take up full container
-                    // padding: EdgeInsets.all(GameConfig.imageDropTargetPadding),
-                    decoration: BoxDecoration(
-                      // Remove border radius for edge-to-edge display
-                      // borderRadius: BorderRadius.circular(_borderRadius),
-                    ),
-                    // Modified: Keep ClipRRect only for overlays but not for the main container
-                    child: Stack(
-                      children: [
-                        // Show the word when pressed or for 1 second after release
-                        if (showWord)
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    GameConfig.primaryButtonColor.withOpacity(isPressed ? 0.8 : 1.0),
-                                    GameConfig.primaryButtonColor.withOpacity(isPressed ? 0.6 : 0.8),
-                                  ],
-                                ),
-                              ),
-                              // Use Padding and FittedBox for dynamic text sizing
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                child: Center(
-                                  child: FittedBox(
-                                    fit: BoxFit.contain, // Scale down to fit
-                                    child: Text(
-                                      widget.item.word,
-                                      style: GameConfig.wordTextStyle.copyWith(
-                                        // Remove fixed font size, FittedBox handles sizing
-                                        // fontSize: GameConfig.imageDropWordFontSize, 
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.center, 
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          // Image - No ClipRRect to allow edge-to-edge display
-                          Positioned.fill(
-                            child: Opacity(
-                              opacity: isHovering ? 0.7 : 1.0,
-                              child: Image.asset(
-                                widget.item.imagePath,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                              ),
-                            ),
+                return Container(
+                  width: availableWidth,
+                  height: containerHeight,
+                  // Remove padding to allow image to take up full container
+                  decoration: BoxDecoration(
+                    // Remove border radius for edge-to-edge display
+                  ),
+                  // Modified: Keep ClipRRect only for overlays but not for the main container
+                  child: Stack(
+                    children: [
+                      // Image - No ClipRRect to allow edge-to-edge display
+                      Positioned.fill(
+                        child: Opacity(
+                          opacity: isHovering ? 0.7 : 1.0,
+                          child: Image.asset(
+                            widget.item.imagePath,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
                           ),
-                        
-                        // Hover indicator
-                        if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
-                      ],
-                    ),
+                        ),
+                      ),
+                      
+                      // Hover indicator
+                      if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
+                    ],
                   ),
                 );
               },

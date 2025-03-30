@@ -22,7 +22,7 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
   bool _isWaitingForAnimations = false;
   
   @override
-  bool get fullScreenMode => true; // Enable full screen mode to remove padding and AppBar
+  bool get fullScreenMode => false; // Enable full screen mode to remove padding and AppBar
 
   @override
   void initState() {
@@ -128,7 +128,18 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
       );
     }
     
-    // If the image should be visible, show it immediately without fade-in
+    // Play question audio only if this word hasn't had its question played yet
+    if (gameState.currentItem != null && !gameState.hasQuestionBeenPlayed(gameState.currentItem!.word)) {
+      // Mark this word as having had its question played
+      gameState.markQuestionAsPlayed(gameState.currentItem!.word);
+      
+      // Use Future.microtask to avoid blocking the UI
+      Future.microtask(() {
+        String word = gameState.currentItem!.word;
+        audioService.playQuestion(word, gameState.questionVariation);
+      });
+    }
+    
     return Hero(
       tag: 'game_image_${gameState.currentItem!.imagePath}',
       child: Container(

@@ -36,14 +36,14 @@ class GameConfig {
   static const double bodyTextFontSize = 18.0;
 
   // --- Timing --- 
-  // TODO: Re-evaluate if drop/fade durations are needed or can be removed
-  static const Duration dropAnimationDuration = Duration(milliseconds: 300);
-  static const Duration fadeAnimationDuration = Duration(milliseconds: 500);
-  // Sequence timing
-  static const Duration betweenLettersDelay = Duration(milliseconds: 20); // Used? Maybe for audio spacing
-  static const Duration afterLettersDelay = Duration(milliseconds: 700); // Delay after letter sounds before draggable
-  static const Duration letterLoadDelay = Duration(milliseconds: 1000); // Delay before showing letters?
-  static const Duration uiUpdateDelay = Duration(milliseconds: 1000); // Delay for UI updates (image show, etc.)
+  // All animation durations set to zero to remove animations
+  static const Duration dropAnimationDuration = Duration.zero;
+  static const Duration fadeAnimationDuration = Duration.zero;
+  // Sequence timing - set to zero to remove delays
+  static const Duration betweenLettersDelay = Duration.zero;
+  static const Duration afterLettersDelay = Duration.zero;
+  static const Duration letterLoadDelay = Duration.zero;
+  static const Duration uiUpdateDelay = Duration.zero;
 
   // --- Image Drop Target (Image Area) --- 
   static const double imageHeight = 300.0; // Used?

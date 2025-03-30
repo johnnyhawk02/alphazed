@@ -14,6 +14,19 @@ class GameState extends ChangeNotifier {
   int questionVariation = 1;
   final Random random = Random();
   
+  // Set to track words for which questions have already been played
+  final Set<String> _wordsWithQuestionsPlayed = {};
+  
+  // Public method to check if a word has had its question played
+  bool hasQuestionBeenPlayed(String word) {
+    return _wordsWithQuestionsPlayed.contains(word);
+  }
+  
+  // Public method to mark a word as having had its question played
+  void markQuestionAsPlayed(String word) {
+    _wordsWithQuestionsPlayed.add(word);
+  }
+  
   bool isQuestionPlaying = false;
   int visibleLetterCount = 0;
   int coloredLetterCount = 0;
@@ -101,40 +114,10 @@ class GameState extends ChangeNotifier {
   Future<void> playQuestionAndRevealLetters() async {
     if (gameItems.isEmpty) return;
     
-    isQuestionPlaying = true;
-    notifyListeners();
-    
-    try {
-      String wordName = currentItem!.word;
-      await audioService.playQuestion(wordName, questionVariation);
-      await audioService.waitForQuestionCompletion();
-      
-      await revealLettersSequentially();
-    } catch (e) {
-      await revealLettersSequentially();
-    }
-  }
-  
-  Future<void> revealLettersSequentially() async {
+    // Set everything visible and interactive immediately
     isQuestionPlaying = false;
-    coloredLetterCount = 0;
-    lettersAreDraggable = false;
-    notifyListeners();
-
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    for (int i = 0; i < currentOptions.length; i++) {
-      coloredLetterCount = i + 1;
-      notifyListeners();
-      
-      await audioService.playLetter(currentOptions[i]);
-      await audioService.waitForLetterCompletion();
-      if (i < currentOptions.length - 1) {
-        await Future.delayed(const Duration(milliseconds: 400));
-      }
-    }
-    
-    await Future.delayed(const Duration(milliseconds: 300)); 
+    visibleLetterCount = currentOptions.length;
+    coloredLetterCount = currentOptions.length;
     lettersAreDraggable = true;
     notifyListeners();
   }
@@ -164,14 +147,24 @@ class GameState extends ChangeNotifier {
     
     currentOptions = gameItems[currentIndex].generateOptions(allLetters);
     visibleLetterCount = currentOptions.length;
-    coloredLetterCount = 0;
-    lettersAreDraggable = false;
-    isQuestionPlaying = false;
+    coloredLetterCount = currentOptions.length; // Show all letters colored
+    lettersAreDraggable = true; // Make them immediately draggable
+    isQuestionPlaying = true; // Set to true since we'll play the question
     isImageVisible = true;
     notifyListeners();
     
-    await Future.delayed(const Duration(milliseconds: 300)); 
-    playQuestionAndRevealLetters();
+    // Play the question for the new turn
+    if (currentItem != null && !hasQuestionBeenPlayed(currentItem!.word)) {
+      // Mark this word as having had its question played
+      markQuestionAsPlayed(currentItem!.word);
+      
+      // Play the question for the current word
+      await audioService.playQuestion(currentItem!.word, questionVariation);
+      
+      // After question finishes, update the state
+      isQuestionPlaying = false;
+      notifyListeners();
+    }
   }
   
   // New method to start the game only when user is ready
@@ -180,10 +173,13 @@ class GameState extends ChangeNotifier {
     
     _gameStarted = true;
     isImageVisible = true; // Now show the image
-    notifyListeners();
     
-    await Future.delayed(const Duration(milliseconds: 300));
-    await playQuestionAndRevealLetters();
+    // Show all letter buttons simultaneously
+    visibleLetterCount = currentOptions.length;
+    coloredLetterCount = currentOptions.length;
+    lettersAreDraggable = true;
+    
+    notifyListeners();
   }
   
   @override
