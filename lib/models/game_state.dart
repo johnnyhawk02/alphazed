@@ -40,7 +40,7 @@ class GameState extends ChangeNotifier {
     }
     try {
       final imageFiles = await AssetLoader.getAssets(
-        directory: 'images',
+        directory: 'images/words',
         extensions: ['.jpeg', '.jpg', '.png']
       );
       
@@ -89,9 +89,9 @@ class GameState extends ChangeNotifier {
   
   void _loadDefaultItems() {
     final defaults = [
-      'assets/images/apple.jpeg',
-      'assets/images/ball.jpeg',
-      'assets/images/cat.jpeg',
+      'assets/images/words/apple.jpeg',
+      'assets/images/words/ball.jpeg',
+      'assets/images/words/cat.jpeg',
     ];
     
     gameItems = defaults.map((path) => GameItem.fromImagePath(path)).toList();
@@ -146,30 +146,32 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
   
-  Future<String?> nextImage() async {
+  Future<String?> prepareNextImage() async {
     if (gameItems.isEmpty) return null;
-
+    
+    // Get the next index but don't immediately move to it
+    final int nextIndex = (currentIndex + 1) % gameItems.length;
+    return gameItems[nextIndex].imagePath;
+  }
+  
+  // This method is called when we're actually ready to show the next image
+  Future<void> showPreparedImage() async {
+    if (gameItems.isEmpty) return;
+    
+    // Now actually advance to the next image
     currentIndex = (currentIndex + 1) % gameItems.length;
     questionVariation = 1;
-
-    final int nextIndex = (currentIndex + 1) % gameItems.length;
-    final String? nextImagePath = gameItems.length > 1 ? gameItems[nextIndex].imagePath : null;
-
+    
     currentOptions = gameItems[currentIndex].generateOptions(allLetters);
-
     visibleLetterCount = currentOptions.length;
     coloredLetterCount = 0;
     lettersAreDraggable = false;
     isQuestionPlaying = false;
     isImageVisible = true;
-
     notifyListeners();
-
+    
     await Future.delayed(const Duration(milliseconds: 300)); 
-
     playQuestionAndRevealLetters();
-
-    return nextImagePath; 
   }
   
   // New method to start the game only when user is ready

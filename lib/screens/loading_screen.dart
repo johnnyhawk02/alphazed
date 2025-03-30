@@ -95,6 +95,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
   // Preload the most critical assets to show UI faster
   Future<void> _preloadCriticalAssets() async {
     try {
+      // Removed splash_icon.png preloading to avoid duplication
       // Preload animation assets
       await precacheImage(const AssetImage('assets/icons/app_logo.png'), context);
       

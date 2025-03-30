@@ -5,29 +5,63 @@ import '../models/game_state.dart';
 import '../services/audio_service.dart';
 import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
+import '../widgets/pinata_widget.dart'; // Import the PinataWidget
 import 'base_game_screen.dart';
-import 'dart:math' as math;
 
 class LetterPictureMatch extends BaseGameScreen {
   const LetterPictureMatch({super.key}) : super(title: 'Picture Matching');
-  
-  @override
-  bool get fullScreenMode => true; // Enable full screen mode to remove padding and AppBar
   
   @override
   BaseGameScreenState<LetterPictureMatch> createState() => _LetterPictureMatchState();
 }
 
 class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> with TickerProviderStateMixin {
+  bool _showPinata = false;
   
+  // Tracks if we're waiting for animations to complete
+  bool _isWaitingForAnimations = false;
+  
+  @override
+  bool get fullScreenMode => true; // Enable full screen mode to remove padding and AppBar
+
   @override
   void initState() {
     super.initState();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  void _handlePinataBroken(bool animationsComplete) {
+    print("Pinata broken! Animations complete: $animationsComplete");
+    
+    // Show celebration message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('¡Fiesta! The pinata broke! 🎉'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    
+    if (animationsComplete) {
+      // If animations are already complete, move to next turn
+      _moveToNextTurn();
+    } else {
+      // Set flag that we're waiting for animations to complete
+      setState(() {
+        _isWaitingForAnimations = true;
+      });
+    }
+  }
+  
+  void _moveToNextTurn() {
+    if (mounted) {
+      setState(() {
+        _showPinata = false;
+        _isWaitingForAnimations = false;
+      });
+      
+      // Now proceed to next image
+      final gameState = Provider.of<GameState>(context, listen: false);
+      gameState.showPreparedImage();
+    }
   }
 
   @override
@@ -55,6 +89,28 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
             SizedBox(height: GameConfig.defaultPadding),
           ],
         ),
+        // Show the pinata widget if _showPinata is true
+        if (_showPinata)
+          Positioned(
+            top: 150,
+            left: (MediaQuery.of(context).size.width - 540) / 2, // Center horizontally (adjusted for 3x size)
+            child: PinataWidget(
+              width: 540, // 3x bigger (was 180)
+              height: 540, // 3x bigger (was 180)
+              intactImagePath: 'assets/images/pinata/pinata_intact.png',
+              brokenImagePath: 'assets/images/pinata/pinata_broken.png',
+              audioService: audioService, // Pass the audioService
+              onBroken: (animationsComplete) {
+                if (_isWaitingForAnimations && animationsComplete) {
+                  // If we were waiting for animations and they're now complete, proceed
+                  _moveToNextTurn();
+                } else {
+                  // Otherwise handle as usual
+                  _handlePinataBroken(animationsComplete);
+                }
+              },
+            ),
+          ),
       ],
     );
   }
@@ -117,16 +173,19 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
                       draggable: gameState.lettersAreDraggable,
                       onDragSuccess: (success) async {
                         if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
-                          // Play success sounds
-                          await audioService.playAudio('assets/audio/other/bell.mp3');
-                          await audioService.playCongratulations();
+                          // IMMEDIATELY show the pinata before any audio or animations
+                          setState(() {
+                            _showPinata = true;
+                          });
                           
-                          // Immediately proceed with the game flow
+                          // Only play a simple bell sound - no congratulations or other animations
+                          audioService.playAudio('assets/audio/other/bell.mp3');
+                          
+                          // Just prepare the next image without advancing to it
                           if (mounted) {
-                            // Call nextImage and get the path for the *next* image
-                            final String? nextImagePath = await gameState.nextImage();
-
-                            // Precache the next image if a path was returned
+                            final String? nextImagePath = await gameState.prepareNextImage();
+                            
+                            // Precache the image for faster loading later
                             if (nextImagePath != null && context.mounted) {
                               try {
                                 await precacheImage(AssetImage(nextImagePath), context);

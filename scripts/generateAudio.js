@@ -277,7 +277,7 @@ async function generateAllAudio() {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const baseAssetsDir = path.join(__dirname, '..', 'assets'); // Adjust if structure differs
-    const imagesDir = path.join(baseAssetsDir, 'images');
+    const imagesDir = path.join(baseAssetsDir, 'images/words');
     const audioDir = path.join(baseAssetsDir, 'audio');
 
     const wordsDir = path.join(audioDir, 'words');
