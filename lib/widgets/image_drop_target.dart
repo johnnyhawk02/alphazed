@@ -4,6 +4,7 @@ import '../models/game_item.dart';
 import '../config/game_config.dart';
 import '../services/audio_service.dart';
 import '../services/theme_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ImageDropTarget extends StatefulWidget {
   final GameItem item;
@@ -24,20 +25,14 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
   static const double _borderRadius = 0.0;
   
   bool isHovering = false;
-  String? correctLetter;
   
-  // Audio service for playing word sounds
-  final AudioService _audioService = AudioService();
-  
-  @override
-  void initState() {
-    super.initState();
-  }
-  
-  @override
-  void dispose() {
-    _audioService.dispose();
-    super.dispose();
+  // Get AudioService from the widget tree instead of creating a new instance
+  AudioService? _getAudioService() {
+    try {
+      return Provider.of<AudioService>(context, listen: false);
+    } catch (e) {
+      return null;
+    }
   }
   
   // Build the hover indicator
@@ -54,6 +49,24 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
           Icons.add_circle_outline,
           size: 60,
           color: GameConfig.primaryButtonColor,
+        ),
+      ),
+    );
+  }
+  
+  // Build the word overlay
+  Widget _buildWordOverlay() {
+    return Positioned(
+      bottom: 10,
+      left: 0,
+      right: 0,
+      child: Text(
+        widget.item.word.toLowerCase(),
+        textAlign: TextAlign.center,
+        style: GoogleFonts.fredoka(
+          color: Colors.black,
+          fontSize: 16.0,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -119,6 +132,9 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
                           ),
                         ),
                       ),
+                      
+                      // Word overlay
+                      _buildWordOverlay(),
                       
                       // Hover indicator
                       if (isHovering) Positioned.fill(child: _buildHoverIndicator()),

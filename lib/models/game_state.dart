@@ -15,16 +15,20 @@ class GameState extends ChangeNotifier {
   final Random random = Random();
   
   // Set to track words for which questions have already been played
-  final Set<String> _wordsWithQuestionsPlayed = {};
+  final Set<String> _playedQuestions = {};
+  
+  // Property to store the next prepared item
+  GameItem? _preparedItem;
   
   // Public method to check if a word has had its question played
   bool hasQuestionBeenPlayed(String word) {
-    return _wordsWithQuestionsPlayed.contains(word);
+    // Check if we've played the question for this specific word
+    return _playedQuestions.contains(word.toLowerCase());
   }
   
   // Public method to mark a word as having had its question played
   void markQuestionAsPlayed(String word) {
-    _wordsWithQuestionsPlayed.add(word);
+    _playedQuestions.add(word.toLowerCase());
   }
   
   bool isQuestionPlaying = false;
@@ -132,8 +136,15 @@ class GameState extends ChangeNotifier {
   Future<String?> prepareNextImage() async {
     if (gameItems.isEmpty) return null;
     
-    // Get the next index but don't immediately move to it
-    final int nextIndex = (currentIndex + 1) % gameItems.length;
+    // Get the next index (wrap around if we reach the end)
+    int nextIndex = (currentIndex + 1) % gameItems.length;
+    
+    // Clear the played question status for the next item
+    if (gameItems[nextIndex] != null) {
+      _playedQuestions.remove(gameItems[nextIndex].word.toLowerCase());
+    }
+    
+    // Return the path to the next image for precaching
     return gameItems[nextIndex].imagePath;
   }
   
@@ -143,28 +154,26 @@ class GameState extends ChangeNotifier {
     
     // Now actually advance to the next image
     currentIndex = (currentIndex + 1) % gameItems.length;
-    questionVariation = 1;
+    questionVariation = random.nextInt(3) + 1; // Randomly select 1, 2, or 3
+    
+    // IMPORTANT: Reset the played status for the new current word 
+    // This ensures each word's question will be played exactly once per round
+    if (currentItem != null) {
+      print('🔄 Resetting played status for new word: ${currentItem!.word}');
+      _playedQuestions.remove(currentItem!.word.toLowerCase());
+    }
     
     currentOptions = gameItems[currentIndex].generateOptions(allLetters);
     visibleLetterCount = currentOptions.length;
     coloredLetterCount = currentOptions.length; // Show all letters colored
     lettersAreDraggable = true; // Make them immediately draggable
-    isQuestionPlaying = true; // Set to true since we'll play the question
+    isQuestionPlaying = false; // Changed from true to false to prevent question playback here
     isImageVisible = true;
     notifyListeners();
     
-    // Play the question for the new turn
-    if (currentItem != null && !hasQuestionBeenPlayed(currentItem!.word)) {
-      // Mark this word as having had its question played
-      markQuestionAsPlayed(currentItem!.word);
-      
-      // Play the question for the current word
-      await audioService.playQuestion(currentItem!.word, questionVariation);
-      
-      // After question finishes, update the state
-      isQuestionPlaying = false;
-      notifyListeners();
-    }
+    // Remove this section that plays the question audio
+    // The buildImageDropTarget method in letter_to_picture_screen.dart now handles this
+    // This will prevent duplicate audio playback
   }
   
   // New method to start the game only when user is ready
@@ -186,5 +195,31 @@ class GameState extends ChangeNotifier {
   void dispose() {
     audioService.onCongratsStart = null;
     super.dispose();
+  }
+  
+  // Add this method to reset played questions when resetting the game
+  @override
+  void resetGame() {
+    _playedQuestions.clear();
+    // Reset other game state as needed
+    notifyListeners();
+  }
+  
+  // Helper method to prepare options for the next item
+  void _prepareOptionsForItem(GameItem item) {
+    // Generate letter options for the item and store them
+    // This prepares the options without immediately showing them
+    // They will be used when showPreparedImage() is called
+  }
+}
+
+extension GameItemListExtension on List<GameItem> {
+  Future<GameItem?> getNextItem() async {
+    // Simple implementation that returns the next item in the list
+    // or null if we're at the end
+    if (isEmpty) return null;
+    
+    // You might want to implement more complex logic here
+    return this[0]; // Just return the first item for now
   }
 }

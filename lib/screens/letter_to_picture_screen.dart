@@ -5,7 +5,7 @@ import '../models/game_state.dart';
 import '../services/audio_service.dart';
 import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
-import '../widgets/pinata_widget.dart'; // Import the PinataWidget
+import 'pinata_screen.dart'; // Import the new PinataScreen
 import 'base_game_screen.dart';
 
 class LetterPictureMatch extends BaseGameScreen {
@@ -16,11 +16,6 @@ class LetterPictureMatch extends BaseGameScreen {
 }
 
 class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> with TickerProviderStateMixin {
-  bool _showPinata = false;
-  
-  // Tracks if we're waiting for animations to complete
-  bool _isWaitingForAnimations = false;
-  
   @override
   bool get fullScreenMode => false; // Enable full screen mode to remove padding and AppBar
 
@@ -29,88 +24,26 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     super.initState();
   }
 
-  void _handlePinataBroken(bool animationsComplete) {
-    print("Pinata broken! Animations complete: $animationsComplete");
-    
-    // Show celebration message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('¡Fiesta! The pinata broke! 🎉'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-    
-    if (animationsComplete) {
-      // If animations are already complete, move to next turn
-      _moveToNextTurn();
-    } else {
-      // Set flag that we're waiting for animations to complete
-      setState(() {
-        _isWaitingForAnimations = true;
-      });
-    }
-  }
-  
-  void _moveToNextTurn() {
-    if (mounted) {
-      setState(() {
-        _showPinata = false;
-        _isWaitingForAnimations = false;
-      });
-      
-      // Now proceed to next image
-      final gameState = Provider.of<GameState>(context, listen: false);
-      gameState.showPreparedImage();
-    }
-  }
-
   @override
   Widget buildPortraitLayout(GameState gameState, AudioService audioService) {
-    return Stack(
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        // Main game content (Column)
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Container(
-              key: targetContainerKey,
-              width: MediaQuery.of(context).size.width,
-              decoration: BoxDecoration(
-                // Removed border radius to allow image to go edge-to-edge
-                boxShadow: [],
-              ),
-              child: buildImageDropTarget(gameState, audioService),
-            ),
-            SizedBox(height: GameConfig.defaultPadding * 1.5),
-            Expanded(
-              flex: GameConfig.letterButtonsFlex,
-              child: buildLetterGrid(gameState, audioService),
-            ),
-            SizedBox(height: GameConfig.defaultPadding),
-          ],
-        ),
-        // Show the pinata widget if _showPinata is true
-        if (_showPinata)
-          Positioned(
-            top: 150,
-            left: (MediaQuery.of(context).size.width - 540) / 2, // Center horizontally (adjusted for 3x size)
-            child: PinataWidget(
-              width: 540, // 3x bigger (was 180)
-              height: 540, // 3x bigger (was 180)
-              intactImagePath: 'assets/images/pinata/pinata_intact.png',
-              brokenImagePath: 'assets/images/pinata/pinata_broken.png',
-              audioService: audioService, // Pass the audioService
-              onBroken: (animationsComplete) {
-                if (_isWaitingForAnimations && animationsComplete) {
-                  // If we were waiting for animations and they're now complete, proceed
-                  _moveToNextTurn();
-                } else {
-                  // Otherwise handle as usual
-                  _handlePinataBroken(animationsComplete);
-                }
-              },
-            ),
+        Container(
+          key: targetContainerKey,
+          width: MediaQuery.of(context).size.width,
+          decoration: BoxDecoration(
+            // Removed border radius to allow image to go edge-to-edge
+            boxShadow: [],
           ),
+          child: buildImageDropTarget(gameState, audioService),
+        ),
+        SizedBox(height: GameConfig.defaultPadding * 1.5),
+        Expanded(
+          flex: GameConfig.letterButtonsFlex,
+          child: buildLetterGrid(gameState, audioService),
+        ),
+        SizedBox(height: GameConfig.defaultPadding),
       ],
     );
   }
@@ -128,16 +61,25 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
       );
     }
     
-    // Play question audio only if this word hasn't had its question played yet
+    // Only play question audio if we're not coming back from a pinata screen
+    // This needs to happen directly after the image becomes visible
     if (gameState.currentItem != null && !gameState.hasQuestionBeenPlayed(gameState.currentItem!.word)) {
-      // Mark this word as having had its question played
+      print('🎯 Attempting to play question for: ${gameState.currentItem!.word}');
+      
+      // Mark it as played IMMEDIATELY before attempting to play it
       gameState.markQuestionAsPlayed(gameState.currentItem!.word);
       
       // Use Future.microtask to avoid blocking the UI
-      Future.microtask(() {
-        String word = gameState.currentItem!.word;
-        audioService.playQuestion(word, gameState.questionVariation);
+      Future.microtask(() async {
+        try {
+          // Play the question audio with the current variation
+          await audioService.playQuestion(gameState.currentItem!.word, gameState.questionVariation);
+        } catch (e) {
+          print('💥 Error in question audio playback: $e');
+        }
       });
+    } else {
+      print('⏭️ Skipping question for: ${gameState.currentItem!.word} - already played');
     }
     
     return Hero(
@@ -160,6 +102,8 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
 
   @override
   Widget buildLetterGrid(GameState gameState, AudioService audioService) {
+    // Remove question audio playback from here - it's now handled in buildImageDropTarget
+    
     return Center(
       child: SizedBox(
         width: MediaQuery.of(context).size.width, // Use full width for a single line
@@ -184,13 +128,34 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
                       draggable: gameState.lettersAreDraggable,
                       onDragSuccess: (success) async {
                         if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
-                          // IMMEDIATELY show the pinata before any audio or animations
-                          setState(() {
-                            _showPinata = true;
-                          });
+                          // Instead of showing pinata overlay, navigate to the PinataScreen
+                          // Add this flag to prevent the question from playing when returning from pinata
+                          gameState.markQuestionAsPlayed(gameState.currentItem!.word);
                           
-                          // Only play a simple bell sound - no congratulations or other animations
-                          audioService.playAudio('assets/audio/other/bell.mp3');
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => PinataScreen(
+                                onComplete: () {
+                                  // Return to the main game screen
+                                  Navigator.of(context).pop();
+                                  
+                                  // Now proceed to next image but don't play question audio
+                                  // We'll explicitly mark the next question as played to prevent it
+                                  final gameState = Provider.of<GameState>(context, listen: false);
+                                  
+                                  // This ensures the question won't be played for the next image
+                                  if (gameState.gameItems.isNotEmpty) {
+                                    int nextIndex = (gameState.currentIndex + 1) % gameState.gameItems.length;
+                                    if (nextIndex < gameState.gameItems.length) {
+                                      gameState.markQuestionAsPlayed(gameState.gameItems[nextIndex].word);
+                                    }
+                                  }
+                                  
+                                  gameState.showPreparedImage();
+                                },
+                              ),
+                            ),
+                          );
                           
                           // Just prepare the next image without advancing to it
                           if (mounted) {

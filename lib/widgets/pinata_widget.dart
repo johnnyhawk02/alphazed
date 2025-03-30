@@ -89,12 +89,12 @@ class _PinataWidgetState extends State<PinataWidget> with SingleTickerProviderSt
 
   void _playBreakSound() async {
     try {
-      await widget.audioService.playAudio('assets/audio/other/correct.mp3');
-      // Mark audio as complete and check if we can proceed
+      // Simplified: Just play the sound directly without additional complexity
+      widget.audioService.playAudio('assets/audio/other/correct.mp3');
+      // Mark audio as complete immediately since we don't need to wait
       _audioComplete = true;
       _checkIfAllComplete();
     } catch (e) {
-      // In case of error, still mark as complete to avoid blocking
       _audioComplete = true;
       _checkIfAllComplete();
     }
@@ -140,7 +140,7 @@ class _PinataWidgetState extends State<PinataWidget> with SingleTickerProviderSt
     final index = _random.nextInt(_sparkControllers.length);
     _sparkControllers[index].play();
     
-    // Play a hitting sound effect
+    // Simplified: Play tap sound directly
     widget.audioService.playAudio('assets/audio/other/bell.mp3');
     
     // Play swing animation
@@ -151,8 +151,10 @@ class _PinataWidgetState extends State<PinataWidget> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Main confetti emitter in the center
-        Positioned.fill(
+        // Main confetti emitter in the center of the piñata
+        Positioned(
+          left: widget.width / 2,
+          top: widget.height / 2,
           child: ConfettiWidget(
             confettiController: _sparkController,
             blastDirectionality: BlastDirectionality.explosive,
@@ -223,9 +225,11 @@ class _PinataWidgetState extends State<PinataWidget> with SingleTickerProviderSt
           ),
         ),
         
-        // Big final explosion when the piñata breaks
+        // Big final explosion when the piñata breaks - now centered on the piñata
         if (_isBroken)
-          Positioned.fill(
+          Positioned(
+            left: widget.width / 2,
+            top: widget.height / 2,
             child: ConfettiWidget(
               confettiController: _sparkController,
               blastDirectionality: BlastDirectionality.explosive,
