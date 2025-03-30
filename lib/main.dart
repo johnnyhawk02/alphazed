@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'screens/loading_screen.dart';
 import 'models/game_state.dart';
 import 'services/audio_service.dart';
+import 'services/theme_provider.dart'; // Add Theme Provider
 import 'package:provider/provider.dart';
 import 'config/game_config.dart'; // Import GameConfig
 
@@ -67,42 +68,49 @@ class MyApp extends StatelessWidget {
           update: (context, audioService, previousGameState) => 
             previousGameState ?? GameState(audioService: audioService),
         ),
-      ],
-      child: MaterialApp(
-        title: 'AlphaZed',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          scaffoldBackgroundColor: GameConfig.scaffoldBackgroundColor,
-          canvasColor: GameConfig.dialogBackgroundColor,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: GameConfig.primaryButtonColor,
-            background: GameConfig.defaultBackgroundColor,
-            surface: GameConfig.defaultBackgroundColor,
-          ),
-          cardColor: GameConfig.cardBackgroundColor,
-          useMaterial3: true,
-          appBarTheme: AppBarTheme(
-            systemOverlayStyle: SystemUiOverlayStyle.light,
-            backgroundColor: GameConfig.appBarBackgroundColor,
-            elevation: 0,
-            shadowColor: Colors.transparent,
-            iconTheme: const IconThemeData(
-              opacity: 0.0,
-            ),
-          ),
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (context) => ThemeProvider(),
         ),
-        builder: (context, child) {
-          // Preload assets as soon as the app starts
-          precacheAssets(context);
-          return child!;
-        },
-        // Custom page route to disable back button animations
-        onGenerateRoute: (RouteSettings settings) {
-          return null;
-        },
-        home: const LoadingScreen(),
-        // Define routes that don't show back button
-        routes: {
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'AlphaZed',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              scaffoldBackgroundColor: themeProvider.backgroundColor,
+              canvasColor: themeProvider.backgroundColor,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: GameConfig.primaryButtonColor,
+                background: themeProvider.backgroundColor,
+                surface: themeProvider.backgroundColor,
+              ),
+              cardColor: themeProvider.backgroundColor,
+              useMaterial3: true,
+              appBarTheme: AppBarTheme(
+                systemOverlayStyle: SystemUiOverlayStyle.light,
+                backgroundColor: GameConfig.appBarBackgroundColor,
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                iconTheme: const IconThemeData(
+                  opacity: 1.0, // Make app bar icons visible
+                ),
+              ),
+            ),
+            builder: (context, child) {
+              // Preload assets as soon as the app starts
+              precacheAssets(context);
+              return child!;
+            },
+            // Custom page route to disable back button animations
+            onGenerateRoute: (RouteSettings settings) {
+              return null;
+            },
+            home: const LoadingScreen(),
+            // Define routes that don't show back button
+            routes: {
+            },
+          );
         },
       ),
     );

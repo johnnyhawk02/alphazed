@@ -129,9 +129,8 @@ class GameState extends ChangeNotifier {
       
       await audioService.playLetter(currentOptions[i]);
       await audioService.waitForLetterCompletion();
-
       if (i < currentOptions.length - 1) {
-        await Future.delayed(const Duration(seconds: 1));
+        await Future.delayed(const Duration(milliseconds: 400));
       }
     }
     

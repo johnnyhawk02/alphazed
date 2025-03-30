@@ -178,6 +178,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
               ),
             ),
             child: SafeArea(
+              minimum: const EdgeInsets.only(top: 40.0),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

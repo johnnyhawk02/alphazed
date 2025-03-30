@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/game_item.dart';
 import '../config/game_config.dart';
 import '../services/audio_service.dart';
+import '../services/theme_provider.dart';
 
 class ImageDropTarget extends StatefulWidget {
   final GameItem item;
@@ -22,18 +24,9 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
   static const double _borderRadius = 0.0;
   
   bool isHovering = false;
-  bool isIncorrect = false;
-  String? correctLetter; // Track the correct letter to display
-  bool showWord = false; // Track if we should show the word
-  bool isPressed = false; // Track if finger/mouse is pressed
-  
-  // Animation controller for the red flash effect
-  late AnimationController _flashController;
-  late Animation<Color?> _flashAnimation;
-  
-  // Animation controller for the success scale effect (NEW)
-  late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
+  String? correctLetter;
+  bool showWord = false;
+  bool isPressed = false;
   
   // Audio service for playing word sounds
   final AudioService _audioService = AudioService();
@@ -41,63 +34,12 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-    
-    _flashController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    
-    _flashAnimation = ColorTween(
-      begin: Colors.red.withOpacity(0.7),
-      end: Colors.transparent,
-    ).animate(_flashController)
-      ..addListener(() {
-        setState(() {
-          // Update state when animation value changes
-        });
-      });
-      
-    _flashController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          isIncorrect = false;
-        });
-      }
-    });
-
-    // Scale Animation Setup (NEW)
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 400), // Duration for the scale effect
-      vsync: this,
-    );
-    _scaleAnimation = TweenSequence([
-      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.3), weight: 50),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1.0), weight: 50),
-    ])
-    // Animate directly from controller for debugging
-    .animate(_scaleController);
-    /* Original with Curve:
-    .animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut, // Bouncy curve
-    ));
-    */
   }
   
   @override
   void dispose() {
-    _flashController.dispose();
-    _scaleController.dispose(); // Dispose the new controller
     _audioService.dispose();
     super.dispose();
-  }
-  
-  // Trigger the red flash effect
-  void _flashImageRed() {
-    setState(() {
-      isIncorrect = true;
-    });
-    _flashController.forward();
   }
 
   // Handle press down
@@ -178,122 +120,87 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
               onAcceptWithDetails: (data) {
                 setState(() => isHovering = false);
                 
+                // Check if the dropped letter is correct
                 final isCorrect = data.data.toLowerCase() == widget.item.firstLetter.toLowerCase();
+                
+                // Flash red for incorrect, green for correct
                 if (isCorrect) {
-                  setState(() {
-                    correctLetter = data.data.toLowerCase();
-                  });
-                  _scaleController.forward(from: 0.0); // Keep local scale animation
+                  context.read<ThemeProvider>().flashCorrect();
                 } else {
-                  _flashImageRed();
+                  context.read<ThemeProvider>().flashIncorrect();
                 }
                 
+                // We don't set correctLetter anymore, even for correct answers
                 widget.onLetterAccepted(data.data);
               },
               builder: (context, candidateData, rejectedData) {
-                // Wrap the GestureDetector with ScaleTransition (NEW)
-                return ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: GestureDetector(
-                    onTapDown: _handleTapDown,
-                    onTapUp: _handleTapUp,
-                    onTapCancel: _handleTapCancel,
-                    child: Container(
-                      width: availableWidth,
-                      height: containerHeight,
-                      // Remove padding to allow image to take up full container
-                      // padding: EdgeInsets.all(GameConfig.imageDropTargetPadding),
-                      decoration: BoxDecoration(
-                        // Remove border radius for edge-to-edge display
-                        // borderRadius: BorderRadius.circular(_borderRadius),
-                      ),
-                      // Modified: Keep ClipRRect only for overlays but not for the main container
-                      child: Stack(
-                        children: [
-                          // Show the correct letter on a blue background if matched
-                          if (correctLetter != null)
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      GameConfig.primaryButtonColor,
-                                      GameConfig.primaryButtonColor.withOpacity(0.8),
-                                    ],
-                                  ),
+                return GestureDetector(
+                  onTapDown: _handleTapDown,
+                  onTapUp: _handleTapUp,
+                  onTapCancel: _handleTapCancel,
+                  child: Container(
+                    width: availableWidth,
+                    height: containerHeight,
+                    // Remove padding to allow image to take up full container
+                    // padding: EdgeInsets.all(GameConfig.imageDropTargetPadding),
+                    decoration: BoxDecoration(
+                      // Remove border radius for edge-to-edge display
+                      // borderRadius: BorderRadius.circular(_borderRadius),
+                    ),
+                    // Modified: Keep ClipRRect only for overlays but not for the main container
+                    child: Stack(
+                      children: [
+                        // Show the word when pressed or for 1 second after release
+                        if (showWord)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    GameConfig.primaryButtonColor.withOpacity(isPressed ? 0.8 : 1.0),
+                                    GameConfig.primaryButtonColor.withOpacity(isPressed ? 0.6 : 0.8),
+                                  ],
                                 ),
+                              ),
+                              // Use Padding and FittedBox for dynamic text sizing
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                                 child: Center(
-                                  child: Text(
-                                    correctLetter!,
-                                    style: GameConfig.letterButtonTextStyle.copyWith(
-                                      fontSize: GameConfig.letterFontSize,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                          // Show the word when pressed or for 1 second after release
-                          else if (showWord)
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      GameConfig.primaryButtonColor.withOpacity(isPressed ? 0.8 : 1.0),
-                                      GameConfig.primaryButtonColor.withOpacity(isPressed ? 0.6 : 0.8),
-                                    ],
-                                  ),
-                                ),
-                                // Use Padding and FittedBox for dynamic text sizing
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                  child: Center(
-                                    child: FittedBox(
-                                      fit: BoxFit.contain, // Scale down to fit
-                                      child: Text(
-                                        widget.item.word,
-                                        style: GameConfig.wordTextStyle.copyWith(
-                                          // Remove fixed font size, FittedBox handles sizing
-                                          // fontSize: GameConfig.imageDropWordFontSize, 
-                                          color: Colors.white,
-                                        ),
-                                        textAlign: TextAlign.center, 
+                                  child: FittedBox(
+                                    fit: BoxFit.contain, // Scale down to fit
+                                    child: Text(
+                                      widget.item.word,
+                                      style: GameConfig.wordTextStyle.copyWith(
+                                        // Remove fixed font size, FittedBox handles sizing
+                                        // fontSize: GameConfig.imageDropWordFontSize, 
+                                        color: Colors.white,
                                       ),
+                                      textAlign: TextAlign.center, 
                                     ),
                                   ),
-                                ),
-                              ),
-                            )
-                          else
-                            // Image - No ClipRRect to allow edge-to-edge display
-                            Positioned.fill(
-                              child: Opacity(
-                                opacity: isHovering ? 0.7 : 1.0,
-                                child: Image.asset(
-                                  widget.item.imagePath,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
                                 ),
                               ),
                             ),
-                          
-                          // Red flash overlay when incorrect
-                          if (isIncorrect) Positioned.fill(
-                            child: Container(
-                              color: _flashAnimation.value,
+                          )
+                        else
+                          // Image - No ClipRRect to allow edge-to-edge display
+                          Positioned.fill(
+                            child: Opacity(
+                              opacity: isHovering ? 0.7 : 1.0,
+                              child: Image.asset(
+                                widget.item.imagePath,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
                             ),
                           ),
-                          
-                          // Hover indicator
-                          if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
-                        ],
-                      ),
+                        
+                        // Hover indicator
+                        if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
+                      ],
                     ),
                   ),
                 );

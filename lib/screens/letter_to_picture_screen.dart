@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/game_config.dart';
 import '../models/game_state.dart';
 import '../services/audio_service.dart';
@@ -19,80 +20,14 @@ class LetterPictureMatch extends BaseGameScreen {
 
 class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> with TickerProviderStateMixin {
   
-  late AnimationController _celebrationController;
-  late Animation<double> _celebrationScaleAnimation;
-  bool _isCelebrating = false;
-  // Store Alignment directly, default to center
-  Alignment _celebrationAlignment = Alignment.center; 
-  
   @override
   void initState() {
     super.initState();
-    _celebrationController = AnimationController(
-      duration: const Duration(milliseconds: 500), 
-      vsync: this,
-    );
-    
-    _celebrationScaleAnimation = TweenSequence([
-      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 2.5), weight: 60),
-      TweenSequenceItem(tween: Tween<double>(begin: 2.5, end: 0.0), weight: 40),
-    ]).animate(_celebrationController);
-
-    // Calculate alignment after the first frame is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _calculateCelebrationAlignment();
-    });
-  }
-
-  // New method to calculate alignment
-  void _calculateCelebrationAlignment() {
-    if (!mounted || targetContainerKey.currentContext == null) return;
-
-    final RenderBox? renderBox = targetContainerKey.currentContext!.findRenderObject() as RenderBox?;
-    final Size screenSize = MediaQuery.of(context).size;
-    
-    if (renderBox != null && screenSize.width > 0 && screenSize.height > 0) {
-      final position = renderBox.localToGlobal(Offset.zero);
-      final size = renderBox.size;
-      final absoluteOrigin = Offset(position.dx + size.width / 2, position.dy + size.height / 2);
-
-      // Convert absolute origin to fractional offset for Alignment and store it
-      // Use setState only if the value actually changes to avoid unnecessary rebuilds
-      final newAlignment = Alignment(
-        (absoluteOrigin.dx / screenSize.width) * 2 - 1,
-        (absoluteOrigin.dy / screenSize.height) * 2 - 1
-      );
-      if (_celebrationAlignment != newAlignment) {
-         // No need for setState here, as alignment is only used when _isCelebrating is true,
-         // and _triggerCelebration calls setState anyway.
-         _celebrationAlignment = newAlignment;
-      }
-    }
   }
 
   @override
   void dispose() {
-    _celebrationController.dispose();
     super.dispose();
-  }
-
-  void _triggerCelebration() {
-    if (!mounted) return;
-
-    // No need to calculate origin here anymore
-
-    setState(() {
-      _isCelebrating = true;
-      // _celebrationAlignment is already calculated and stored
-    });
-
-    _celebrationController.forward(from: 0.0).then((_) {
-      if (mounted) {
-        setState(() {
-          _isCelebrating = false;
-        });
-      }
-    });
   }
 
   @override
@@ -120,32 +55,6 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
             SizedBox(height: GameConfig.defaultPadding),
           ],
         ),
-        
-        // Full screen celebration overlay
-        if (_isCelebrating)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: ScaleTransition(
-                // Use the pre-calculated alignment
-                alignment: _celebrationAlignment, 
-                scale: _celebrationScaleAnimation,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle, // Make it a circle emanating outwards
-                    gradient: RadialGradient(
-                      colors: [
-                        // Make starting color more opaque
-                        GameConfig.highlightColor.withOpacity(0.7), 
-                        GameConfig.highlightColor.withOpacity(0.0),
-                      ],
-                      // Adjust stops for a sharper center and quicker fade
-                      stops: const [0.0, 0.6], 
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -208,19 +117,17 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
                       draggable: gameState.lettersAreDraggable,
                       onDragSuccess: (success) async {
                         if (success && gameState.currentOptions[index].toLowerCase() == gameState.currentItem!.firstLetter.toLowerCase()) {
-                          await Future.wait([
-                            audioService.playAudio('assets/audio/other/bell.mp3'),
-                            audioService.playCongratulations(),
-                          ]);
+                          // Play success sounds
+                          await audioService.playAudio('assets/audio/other/bell.mp3');
+                          await audioService.playCongratulations();
                           
-                          // Ensure widget is still mounted before proceeding
+                          // Immediately proceed with the game flow
                           if (mounted) {
                             // Call nextImage and get the path for the *next* image
                             final String? nextImagePath = await gameState.nextImage();
 
                             // Precache the next image if a path was returned
-                            if (nextImagePath != null && context.mounted) { // Check context.mounted again
-                              // Use try-catch just in case precaching fails
+                            if (nextImagePath != null && context.mounted) {
                               try {
                                 await precacheImage(AssetImage(nextImagePath), context);
                               } catch (e) {
