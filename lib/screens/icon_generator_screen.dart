@@ -1,3 +1,8 @@
+// This file contains a development utility for generating app icons.
+// It is commented out to prevent it from being included in production builds.
+// Uncomment this file when you need to generate new app icons during development.
+
+/*
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +11,6 @@ import '../config/game_config.dart';
 
 class IconGeneratorScreen extends StatefulWidget {
   const IconGeneratorScreen({super.key});
-
   @override
   State<IconGeneratorScreen> createState() => _IconGeneratorScreenState();
 }
@@ -289,3 +293,4 @@ class _IconGeneratorScreenState extends State<IconGeneratorScreen> {
     }
   }
 }
+*/

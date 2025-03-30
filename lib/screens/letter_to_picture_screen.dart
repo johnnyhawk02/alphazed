@@ -9,7 +9,10 @@ import 'dart:math' as math;
 
 class LetterPictureMatch extends BaseGameScreen {
   const LetterPictureMatch({super.key}) : super(title: 'Picture Matching');
-
+  
+  @override
+  bool get fullScreenMode => true; // Enable full screen mode to remove padding and AppBar
+  
   @override
   BaseGameScreenState<LetterPictureMatch> createState() => _LetterPictureMatchState();
 }
@@ -98,24 +101,20 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
       children: [
         // Main game content (Column)
         Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Expanded(
-              flex: 3,
-              child: Center(
-                child: Container(
-                  key: targetContainerKey,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(GameConfig.defaultBorderRadius * 2),
-                    boxShadow: [],
-                  ),
-                  child: buildImageDropTarget(gameState, audioService),
-                ),
+            Container(
+              key: targetContainerKey,
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                // Removed border radius to allow image to go edge-to-edge
+                boxShadow: [],
               ),
+              child: buildImageDropTarget(gameState, audioService),
             ),
             SizedBox(height: GameConfig.defaultPadding * 1.5),
             Expanded(
-              flex: 2,
+              flex: GameConfig.letterButtonsFlex,
               child: buildLetterGrid(gameState, audioService),
             ),
             SizedBox(height: GameConfig.defaultPadding),
@@ -155,8 +154,8 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     // If there's no image to show yet, return an empty container with the same size
     if (!gameState.isImageVisible) {
       return Container(
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: MediaQuery.of(context).size.width * 0.6, // Maintain 4:3 aspect ratio
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.width, // 1:1 ratio using screen width
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(36.0),
           color: Colors.transparent,
@@ -167,14 +166,18 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     // If the image should be visible, show it immediately without fade-in
     return Hero(
       tag: 'game_image_${gameState.currentItem!.imagePath}',
-      child: ImageDropTarget(
-        key: ValueKey(gameState.currentItem!.imagePath),
-        item: gameState.currentItem!,
-        onLetterAccepted: (letter) async {
-          if (letter.toLowerCase() != gameState.currentItem!.firstLetter.toLowerCase()) {
-            audioService.playIncorrect();
-          }
-        },
+      child: Container(
+        width: MediaQuery.of(context).size.width, // Full screen width
+        height: MediaQuery.of(context).size.width, // 1:1 ratio using screen width
+        child: ImageDropTarget(
+          key: ValueKey(gameState.currentItem!.imagePath),
+          item: gameState.currentItem!,
+          onLetterAccepted: (letter) async {
+            if (letter.toLowerCase() != gameState.currentItem!.firstLetter.toLowerCase()) {
+              audioService.playIncorrect();
+            }
+          },
+        ),
       ),
     );
   }

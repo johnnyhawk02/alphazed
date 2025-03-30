@@ -2,19 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class GameConfig {
-
   // --- General --- 
-  static const double defaultPadding = 16.0;
-  static const double defaultBorderRadius = 16.0;
-  static final Color defaultBackgroundColor = Color(0xFFF8F9FA); // Light gray
+  static const double defaultPadding = 0.0;
+  static const double defaultBorderRadius = 0.0;
+  
+  // --- App Colors ---
+  static final Color defaultBackgroundColor = Color.fromARGB(255, 255, 247, 17); // Soft warm pink
   static final Color defaultBorderColor = Color(0xFFDEE2E6); // Light gray
   static final Color textColor = Color(0xFF2B2D42); // Dark blue-gray
+  static final Color cardBackgroundColor = defaultBackgroundColor; // Use the same pink for cards
+  static final Color dialogBackgroundColor = defaultBackgroundColor; // Use the same pink for dialogs
+  static final Color scaffoldBackgroundColor = defaultBackgroundColor; // Use the same pink for scaffolds
+  static final Color appBarBackgroundColor = Colors.transparent; // Transparent app bar
+  static final Color systemNavigationBarColor = defaultBackgroundColor; // Use the same pink for system navigation bar
+  
+  // --- Layout Flex Values ---
+  static const int imageAreaFlex = 3; // Flex value for the image area in layout
+  static const int letterButtonsFlex = 2; // Flex value for the letter buttons area in layout
+  
+  // --- Gradient ---
   static final LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFF8F9FA),
-      Color(0xFFE9ECEF),
+      defaultBackgroundColor,
+      defaultBackgroundColor.withOpacity(0.9),
     ],
   );
   static TextStyle get bodyTextStyle => GoogleFonts.fredoka(
@@ -36,7 +48,7 @@ class GameConfig {
   // --- Image Drop Target (Image Area) --- 
   static const double imageHeight = 300.0; // Used?
   static const double imageDropWordFontSize = 150.0; // Font size for word shown on tap
-  static const double imageDropTargetPadding = 8.0; // Internal padding (NEW)
+  static const double imageDropTargetPadding = 0.0; // Internal padding (NEW)
   // (Red Flash animation handled internally in ImageDropTarget state)
   // (Scale animation handled internally in ImageDropTarget state)
 

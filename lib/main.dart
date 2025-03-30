@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/icon_generator_screen.dart';
 import 'screens/loading_screen.dart';
 import 'models/game_state.dart';
 import 'services/audio_service.dart';
 import 'package:provider/provider.dart';
+import 'config/game_config.dart'; // Import GameConfig
 
 // This ensures the app displays immediately
 Future<void> precacheAssets(BuildContext context) async {
@@ -25,10 +25,10 @@ void main() async {
   
   // Set system UI to be compatible with splash screen
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
+    SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
+      systemNavigationBarColor: GameConfig.systemNavigationBarColor,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
@@ -72,17 +72,21 @@ class MyApp extends StatelessWidget {
         title: 'AlphaZed',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4CC9F0)),
+          scaffoldBackgroundColor: GameConfig.scaffoldBackgroundColor,
+          canvasColor: GameConfig.dialogBackgroundColor,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: GameConfig.primaryButtonColor,
+            background: GameConfig.defaultBackgroundColor,
+            surface: GameConfig.defaultBackgroundColor,
+          ),
+          cardColor: GameConfig.cardBackgroundColor,
           useMaterial3: true,
-          // Disable back button in AppBar
-          appBarTheme: const AppBarTheme(
+          appBarTheme: AppBarTheme(
             systemOverlayStyle: SystemUiOverlayStyle.light,
-            backgroundColor: Colors.transparent,
+            backgroundColor: GameConfig.appBarBackgroundColor,
             elevation: 0,
-            // Remove shadow and back button
             shadowColor: Colors.transparent,
-            // This suppresses automatic back button
-            iconTheme: IconThemeData(
+            iconTheme: const IconThemeData(
               opacity: 0.0,
             ),
           ),
@@ -94,21 +98,11 @@ class MyApp extends StatelessWidget {
         },
         // Custom page route to disable back button animations
         onGenerateRoute: (RouteSettings settings) {
-          if (settings.name == '/icon_generator') {
-            return PageRouteBuilder(
-              settings: settings,
-              pageBuilder: (_, __, ___) => const IconGeneratorScreen(),
-              transitionsBuilder: (_, animation, __, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-            );
-          }
           return null;
         },
         home: const LoadingScreen(),
         // Define routes that don't show back button
         routes: {
-          '/icon_generator': (context) => const IconGeneratorScreen(),
         },
       ),
     );
