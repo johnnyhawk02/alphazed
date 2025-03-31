@@ -3,10 +3,10 @@ import 'dart:math';
 class GameItem {
   /// The full path to the image asset
   final String imagePath;
-
+  
   /// The word associated with the image (extracted from filename)
   final String word;
-
+  
   /// The first letter of the word (used for correct answer)
   final String firstLetter;
 
@@ -69,50 +69,37 @@ class GameItem {
     // Extract the word from the image path (filename without extension)
     final filename = imagePath.split('/').last;
     final word = filename.split('.').first.toLowerCase();
-
+    
     // Get the first letter (lowercase)
     final firstLetter = word.isNotEmpty ? word[0].toLowerCase() : '';
-
+    
     return GameItem(
       imagePath: imagePath,
       word: word,
       firstLetter: firstLetter,
     );
   }
-
+  
   /// Returns a list of letter options for this item (1 correct, others random)
   List<String> generateOptions(List<String> allLetters, {int count = 3}) {
     if (count <= 0) return [];
     if (firstLetter.isEmpty) return [];
-
+    
     final random = Random();
-    final options = <String>[firstLetter]; // Start with correct letter
+    final options = <String>[firstLetter];  // Start with correct letter
     final availableLetters = List<String>.from(allLetters)..remove(firstLetter);
     availableLetters.shuffle(random);
-
-    // --- DEBUG LOGGING ---
-    print("generateOptions for '$word' (firstLetter: '$firstLetter')");
-    print("  Initial allLetters count: ${allLetters.length}");
-    print("  Initial availableLetters count: ${availableLetters.length}");
-    print("  Available letters sample: ${availableLetters.take(5).join(', ')}...");
-    // --- END DEBUG LOGGING ---
-
+    
     // Add exactly 2 more random letters to make 3 total
     while (options.length < 3 && availableLetters.isNotEmpty) {
-      // --- DEBUG LOGGING INSIDE LOOP ---
-      print("  Looping: options.length=${options.length}, availableLetters.isNotEmpty=${availableLetters.isNotEmpty}");
-      // --- END DEBUG LOGGING ---
       options.add(availableLetters.removeAt(0));
     }
-
+    
     // Ensure we always return exactly 3 letters
     if (options.length != 3) {
       print("Warning: Generated ${options.length} options instead of 3 for word: $word");
-       // --- DEBUG LOGGING ON WARNING ---
-       print("  Final options before shuffle: $options");
-       // --- END DEBUG LOGGING ---
     }
-
+    
     // Shuffle all options to randomize position
     options.shuffle(random);
     return options;
