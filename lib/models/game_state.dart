@@ -15,6 +15,9 @@ class GameState extends ChangeNotifier {
   int questionVariation = 1;
   final Random random = Random();
 
+  // --- State for Cycling Celebrations ---
+  int _nextCelebrationScreenIndex = 0;
+
   // Set to track words for which questions have already been played
   final Set<String> _playedQuestions = {};
 
@@ -45,6 +48,15 @@ class GameState extends ChangeNotifier {
   bool get gameStarted => _gameStarted;
 
   GameItem? get currentItem => gameItems.isEmpty || currentIndex >= gameItems.length ? null : gameItems[currentIndex];
+
+  // --- Method to get the next celebration index and increment for next time ---
+  int getAndIncrementNextCelebrationIndex(int totalScreens) {
+    if (totalScreens <= 0) return 0; // Avoid division by zero
+    final indexToShow = _nextCelebrationScreenIndex;
+    _nextCelebrationScreenIndex = (_nextCelebrationScreenIndex + 1) % totalScreens;
+    print("Next celebration index: $_nextCelebrationScreenIndex (was $indexToShow)"); // Added logging
+    return indexToShow;
+  }
 
   GameState({required this.audioService}) {
     // Removed the onCongratsStart callback assignment

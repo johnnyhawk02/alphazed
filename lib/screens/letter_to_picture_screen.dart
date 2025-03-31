@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../config/game_config.dart'; // Ensure GameConfig is correctly imported
-import '../models/game_state.dart';    // Ensure GameState is correctly imported
-import '../services/audio_service.dart'; // Ensure AudioService is correctly imported
-import '../widgets/image_drop_target.dart'; // Ensure ImageDropTarget is correctly imported
-import '../widgets/letter_button.dart';     // Ensure LetterButton is correctly imported
-import 'pinata_screen.dart';             // Ensure PinataScreen is correctly imported
-import 'base_game_screen.dart';          // Ensure BaseGameScreen is correctly imported
+import '../config/game_config.dart';
+import '../models/game_state.dart';
+import '../services/audio_service.dart';
+import '../widgets/image_drop_target.dart';
+import '../widgets/letter_button.dart';
+import 'pinata_screen.dart';
+import 'fireworks_screen.dart'; // Import the new screen
+import 'base_game_screen.dart';
 
 // --- LetterPictureMatch Screen Widget ---
 // This screen handles the main game loop of matching letters to pictures.
@@ -192,17 +193,14 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     final String correctFirstLetterLower = currentItem.firstLetter.toLowerCase();
 
     // --- Build Button Row ---
-    // Use Center to horizontally center the Row of buttons.
     return Center(
-      // Use SingleChildScrollView if buttons might overflow the screen width.
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(vertical: GameConfig.defaultPadding), // Optional vertical padding
+        padding: EdgeInsets.symmetric(vertical: GameConfig.defaultPadding),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center, // Center buttons within the Row.
-          // Generate a list of widgets (LetterButtons or SizedBox placeholders).
+          mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
-            gameState.currentOptions.length, // Number of buttons/slots matches options.
+            gameState.currentOptions.length,
             (index) {
               // Get the letter for the current button.
               final String currentLetter = gameState.currentOptions[index];
@@ -213,41 +211,27 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
               // Add padding around each button/placeholder for spacing.
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: buttonPadding),
-                // Use AnimatedSwitcher for smooth transitions between LetterButton and SizedBox.
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300), // Animation duration.
-                  // Define the transition animation (e.g., scale and fade).
                   transitionBuilder: (child, animation) {
                     return ScaleTransition(
                       scale: animation,
                       child: FadeTransition(opacity: animation, child: child),
                     );
                   },
-                  // Conditionally render a LetterButton or an empty SizedBox.
-                  // The condition `index < gameState.visibleLetterCount` controls actual button visibility.
                   child: index < gameState.visibleLetterCount
-                      // --- Render LetterButton ---
                       ? LetterButton(
-                          // Use a unique ValueKey for efficient updates and animations.
                           key: ValueKey('letter_${currentLetter}_$index'),
                           letter: currentLetter,
-                          // Pass whether this button holds the correct letter.
                           isCorrectLetter: isThisTheCorrectLetter,
-                          // Action to perform when the button is tapped.
                           onTap: () => audioService.playLetter(currentLetter),
-                          // Control the visual state (colored/active letter text).
                           colored: index < gameState.coloredLetterCount,
-                          // Control whether the button can be dragged.
                           draggable: gameState.lettersAreDraggable,
 
                           // --- Drag Success Callback ---
-                          // This is called by the LetterButton after a drag ends.
-                          // The `wasCorrectDrop` boolean indicates if it was accepted AND correct.
                           onDragSuccess: (wasCorrectDrop) async {
-                            // Ensure the widget is still mounted before proceeding.
                             if (!mounted) return;
 
-                            // --- Handle CORRECT Drop ---
                             if (wasCorrectDrop) {
                               print("✅ Correct letter '$currentLetter' matched! (Screen notified)");
 
@@ -258,18 +242,14 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
                               gameState.markQuestionAsPlayed(currentItem.word);
 
                               // --- Prepare Next Image Asynchronously ---
-                              // Start preparing the next image data before navigating away.
                               String? nextImagePath;
                               try {
-                                print("🚀 Preparing next image before Pinata...");
+                                print("🚀 Preparing next image before Celebration...");
                                 nextImagePath = await gameState.prepareNextImage();
-                                // If preparation was successful and widget is still mounted, precache.
                                 if (nextImagePath != null && mounted) {
-                                  // Precache without awaiting to avoid blocking the UI thread.
                                   precacheImage(AssetImage(nextImagePath), context).then((_) {
                                      print("🖼️ Precached image: $nextImagePath");
                                   }).catchError((e, s) {
-                                     // Log errors during precaching.
                                      print("⚠️ Failed to precache image: $nextImagePath, Error: $e\n$s");
                                   });
                                 }
@@ -277,72 +257,76 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
                                 print("💥 Error preparing next image: $e");
                               }
 
-                              // --- Navigate to Pinata Screen ---
-                              // Push the PinataScreen onto the navigation stack.
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => PinataScreen(
-                                    audioService: audioService, // Pass audio service.
-                                    // --- Pinata Completion Callback ---
-                                    // This runs when the PinataScreen signals completion.
-                                    onComplete: () {
-                                      // Check mounted status again inside the async callback.
-                                      if (!mounted) return;
-
-                                      print("🎉 Pinata complete. Popping screen.");
-                                      // Return from the PinataScreen.
-                                      Navigator.of(context).pop();
-
-                                      // Access GameState safely (listen: false) to trigger actions.
-                                      final postPinataGameState = Provider.of<GameState>(context, listen: false);
-
-                                      // --- Prevent Next Question Audio ---
-                                      // Mark the *next* item's question as played *before* showing it,
-                                      // to prevent it auto-playing immediately after the pinata sequence.
-                                      int potentialNextIndex = (postPinataGameState.currentIndex + 1) % postPinataGameState.gameItems.length;
-                                      if (postPinataGameState.gameItems.isNotEmpty && potentialNextIndex < postPinataGameState.gameItems.length) {
-                                         final nextItemWord = postPinataGameState.gameItems[potentialNextIndex].word;
-                                         print("🤫 Marking question for upcoming item [$nextItemWord] as played post-pinata.");
-                                         postPinataGameState.markQuestionAsPlayed(nextItemWord);
-                                      } else {
-                                         print("⚠️ Could not determine next item to mark question played post-pinata.");
-                                      }
-
-                                      // --- Show Next Item ---
-                                      // Tell GameState to update its state to show the next (already prepared) item.
-                                      print("🔄 Requesting GameState to show prepared image...");
-                                      postPinataGameState.showPreparedImage();
-                                    },
-                                  ),
-                                ),
-                              );
+                              // --- Navigate to a RANDOM Celebratory Screen ---
+                              if (mounted) {
+                                _navigateToNextCelebration(gameState, audioService);
+                              }
                             }
                             // --- Handle INCORRECT Drop ---
                             else {
-                              // The drop was accepted but was the wrong letter.
-                              // Sound feedback was handled by ImageDropTarget.
-                              // Visual feedback (emoji) was handled by LetterButton.
                               print("❌ Incorrect letter '$currentLetter' drop processed. (Screen notified)");
-                              // No further action needed here unless specified.
                             }
                           },
                         )
-                      // --- Render Placeholder ---
-                      // If index >= gameState.visibleLetterCount, render an empty SizedBox
-                      // to maintain layout spacing while the button is "invisible".
                       : SizedBox(
-                          // Provide a key for stable animations.
                           key: ValueKey('empty_$index'),
                           width: buttonSize,
                           height: buttonSize,
-                          // Optional: Add a visual placeholder style if desired.
-                          // child: Container(decoration: BoxDecoration(color: Colors.grey.shade300, shape: BoxShape.circle)),
                         ),
                 ),
               );
             },
-          ).toList(), // Convert the generated iterable to a List for the Row children.
+          ).toList(),
         ),
+      ),
+    );
+  }
+
+  // --- Helper Method for Sequential Navigation ---
+  void _navigateToNextCelebration(GameState gameState, AudioService audioService) {
+    // List of functions that create our celebratory screens
+    final List<Widget Function(AudioService, VoidCallback)> celebrationScreenFactories = [
+      (audio, onComplete) => PinataScreen(audioService: audio, onComplete: onComplete),
+      (audio, onComplete) => FireworksScreen(audioService: audio, onComplete: onComplete),
+      // Add more screen factories here: e.g., (audio, onComplete) => ConfettiScreen(...),
+    ];
+
+    // Get the index for the next screen from GameState and increment the counter
+    final int screenIndex = gameState.getAndIncrementNextCelebrationIndex(celebrationScreenFactories.length);
+    final selectedScreenFactory = celebrationScreenFactories[screenIndex];
+
+    // Define the callback that each celebration screen will execute when it's done
+    final VoidCallback onCelebrationComplete = () {
+      if (mounted) {
+        print("🎉 Celebration complete. Popping screen.");
+        Navigator.of(context).pop(); // Go back from the celebration screen
+
+        // Access GameState safely (listen: false) to trigger actions.
+        final postCelebrationGameState = Provider.of<GameState>(context, listen: false);
+
+        // --- Prevent Next Question Audio ---
+        int potentialNextIndex = (postCelebrationGameState.currentIndex + 1) % postCelebrationGameState.gameItems.length;
+        if (postCelebrationGameState.gameItems.isNotEmpty && potentialNextIndex < postCelebrationGameState.gameItems.length) {
+           final nextItemWord = postCelebrationGameState.gameItems[potentialNextIndex].word;
+           print("🤫 Marking question for upcoming item [$nextItemWord] as played post-celebration.");
+           postCelebrationGameState.markQuestionAsPlayed(nextItemWord);
+        } else {
+           print("⚠️ Could not determine next item to mark question played post-celebration.");
+        }
+
+        // --- Show Next Item ---
+        print("🔄 Requesting GameState to show prepared image...");
+        postCelebrationGameState.showPreparedImage();
+      }
+    };
+
+    // Build the selected screen using the factory, passing the audio service and the completion callback
+    final celebrationScreen = selectedScreenFactory(audioService, onCelebrationComplete);
+
+    // Navigate to the chosen celebratory screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => celebrationScreen,
       ),
     );
   }

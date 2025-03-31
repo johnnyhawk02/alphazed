@@ -1,16 +1,15 @@
-import 'dart:math'; // Keep if needed for other logic, not strictly necessary for this version
 import 'package:flutter/material.dart';
 import '../services/audio_service.dart';
 import '../widgets/pinata_widget.dart';
 
 class PinataScreen extends StatefulWidget {
   final AudioService audioService;
-  final VoidCallback? onComplete; // Callback when the 'next word' button is pressed or back is pressed
+  final VoidCallback onComplete; // Make this required
 
   const PinataScreen({
     Key? key,
     required this.audioService,
-    this.onComplete,
+    required this.onComplete, // Mark as required
   }) : super(key: key);
 
   @override
@@ -34,7 +33,7 @@ class _PinataScreenState extends State<PinataScreen> {
     const double pinataWidth = 300.0;
     const double pinataHeight = 300.0;
 
-    return Scaffold( // Using Scaffold for better structure and potential AppBar/background color handling
+    return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -51,7 +50,7 @@ class _PinataScreenState extends State<PinataScreen> {
             Positioned(
               top: 40,
               left: 20,
-              child: Container( // Add background for better visibility
+              child: Container(
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.4),
                   shape: BoxShape.circle,
@@ -59,15 +58,8 @@ class _PinataScreenState extends State<PinataScreen> {
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
                   onPressed: () {
-                    // Call onComplete callback if provided before popping/navigating
-                    if (widget.onComplete != null) {
-                      widget.onComplete!();
-                    } else {
-                      // Default behavior if no onComplete is given
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      }
-                    }
+                    // Call onComplete callback directly
+                    widget.onComplete();
                   },
                 ),
               ),
@@ -75,15 +67,13 @@ class _PinataScreenState extends State<PinataScreen> {
 
             // Center pinata area
             Center(
-              child: LayoutBuilder( // Use LayoutBuilder to get center constraints
+              child: LayoutBuilder(
                 builder: (context, constraints) {
                   // Calculate center position - ensures it works regardless of screen size/orientation
                   final centerX = constraints.maxWidth / 2;
                   final centerY = constraints.maxHeight / 2;
 
                   return Stack(
-                    // Stack needs to be large enough to contain the pinata and button
-                    // Clip behavior defaults to hardEdge, which is fine here
                     children: [
                       // Pinata widget - Positioned precisely in the center
                       // Only build the PinataWidget if it's not completely gone
@@ -116,21 +106,14 @@ class _PinataScreenState extends State<PinataScreen> {
                           ),
                         ),
 
-                      // NEXT WORD button - only shown after pinata is completely gone
+                      // NEXT WORD button
                       if (_pinataCompletelyGone)
-                        // Use Center widget within the Positioned.fill for easy centering
                         Positioned.fill(
                           child: Center(
                             child: GestureDetector(
                               onTap: () {
-                                if (widget.onComplete != null) {
-                                  widget.onComplete!();
-                                } else {
-                                  // Default behavior: Pop if possible
-                                  if (Navigator.of(context).canPop()) {
-                                    Navigator.of(context).pop();
-                                  }
-                                }
+                                // Call onComplete callback directly
+                                widget.onComplete();
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
