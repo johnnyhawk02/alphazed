@@ -82,84 +82,26 @@ class GameItem {
   
   /// Returns a list of letter options for this item (1 correct, others random)
   List<String> generateOptions(List<String> allLetters, {int count = 3}) {
-    if (count != 3) {
-      // This logic currently assumes exactly 3 options for permutation check
-      // Add handling for other counts if needed, or throw an error.
-      print("Warning: generateOptions blocklist check currently only supports count=3");
-      // Fallback to old logic for non-3 counts (or implement permutation for variable count)
-      return _generateOptionsSimple(allLetters, count);
-    }
-    if (firstLetter.isEmpty) return []; // Handle items with no first letter
-
-    final random = Random();
-    List<String> options;
-
-    do {
-      // Generate a candidate set of letters
-      options = <String>[firstLetter]; // Start with the correct letter
-      final availableLetters = List<String>.from(allLetters)..remove(firstLetter);
-      availableLetters.shuffle(random);
-      
-      int availableIndex = 0;
-      while (options.length < count && availableIndex < availableLetters.length) {
-        options.add(availableLetters[availableIndex]);
-        availableIndex++;
-      }
-      
-      // If we didn't get enough letters (shouldn't happen with 26 letters available)
-      if (options.length < count) {
-         print("Warning: Could not generate enough unique letters.");
-         return options..shuffle(random); // Return what we have
-      }
-
-      // Check ALL permutations of the generated set
-      bool isAnyPermutationBlocked = false;
-      List<String> p = options; // Use shorter name for permutations
-      List<String> permutations = [
-        "${p[0]}${p[1]}${p[2]}",
-        "${p[0]}${p[2]}${p[1]}",
-        "${p[1]}${p[0]}${p[2]}",
-        "${p[1]}${p[2]}${p[0]}",
-        "${p[2]}${p[0]}${p[1]}",
-        "${p[2]}${p[1]}${p[0]}",
-      ];
-
-      for (String perm in permutations) {
-        if (_blockedWords.contains(perm.toLowerCase())) {
-          isAnyPermutationBlocked = true;
-          break; // Found a blocked permutation, no need to check others
-        }
-      }
-      
-      // If any permutation was blocked, regenerate the options
-      if (isAnyPermutationBlocked) {
-        continue; 
-      } else {
-        // All permutations are safe, break the loop
-        break; 
-      }
-
-    } while (true); // Loop until a safe set (all permutations checked) is found
+    if (count <= 0) return [];
+    if (firstLetter.isEmpty) return [];
     
-    // Shuffle the final, safe options to randomize their order for display
+    final random = Random();
+    final options = <String>[firstLetter];  // Start with correct letter
+    final availableLetters = List<String>.from(allLetters)..remove(firstLetter);
+    availableLetters.shuffle(random);
+    
+    // Add exactly 2 more random letters to make 3 total
+    while (options.length < 3 && availableLetters.isNotEmpty) {
+      options.add(availableLetters.removeAt(0));
+    }
+    
+    // Ensure we always return exactly 3 letters
+    if (options.length != 3) {
+      print("Warning: Generated ${options.length} options instead of 3 for word: $word");
+    }
+    
+    // Shuffle all options to randomize position
     options.shuffle(random);
     return options;
-  }
-
-  // Helper for the old logic (or for counts other than 3)
-  List<String> _generateOptionsSimple(List<String> allLetters, int count) {
-     if (count <= 0) return [];
-     if (firstLetter.isEmpty) return [];
-     final random = Random();
-     final options = <String>[firstLetter];
-     final availableLetters = List<String>.from(allLetters)..remove(firstLetter);
-     availableLetters.shuffle(random);
-     int availableIndex = 0;
-     while (options.length < count && availableIndex < availableLetters.length) {
-       options.add(availableLetters[availableIndex]);
-       availableIndex++;
-     }
-     options.shuffle(random);
-     return options;
   }
 }

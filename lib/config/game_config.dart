@@ -6,6 +6,12 @@ class GameConfig {
   static const double defaultPadding = 0.0;
   static const double defaultBorderRadius = 0.0;
 
+  // --- Loading Screen ---
+  static const double loadingIndicatorWidth = 0.6; // 60% of screen width
+  static const double loadingIndicatorHeight = 10.0;
+  static const double loadingTextSpacing = 20.0;
+  static BorderRadius loadingIndicatorBorderRadius = BorderRadius.circular(10);
+
   // --- App Colors ---
   static final Color defaultBackgroundColor = Color.fromARGB(255, 255, 247, 17); // Soft warm pink
   static final Color defaultBorderColor = Color(0xFFDEE2E6); // Light gray
@@ -181,4 +187,15 @@ class GameConfig {
   // --- Deprecated / Unused? ---
   // static const double letterSpacing = 30.0; // Appears unused, vertical spacing handled by SizedBoxes
 
+  // --- Game State Initialization ---
+  static const int initialIndex = 0;
+  static const bool initialImageVisibility = false;
+  static const bool initialLettersDraggable = false;
+  static const int initialVisibleLetterCount = 0;
+  static const int initialColoredLetterCount = 0;
+
+  // --- Developer Options ---
+  static const bool enableDeveloperOptions = true;
+  static const String developerOptionsTitle = 'Developer Options';
+  static const IconData developerOptionsIcon = Icons.developer_mode;
 }

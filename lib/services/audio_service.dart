@@ -1,6 +1,7 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:math';
 
 // Assuming AssetLoader is not strictly needed for the core audio playback logic shown.
 // If it is used elsewhere for finding assets, keep the import.
@@ -10,6 +11,13 @@ import 'dart:async';
 typedef VoidCallback = void Function();
 
 class AudioService {
+  // Audio path constants
+  static const String _audioBasePath = 'assets/audio';
+  static const String _questionsAudioPath = '$_audioBasePath/questions';
+  static const String _lettersAudioPath = '$_audioBasePath/letters';
+  static const String _wordsAudioPath = '$_audioBasePath/words';
+  static const String _congratsAudioPath = '$_audioBasePath/congrats';
+
   // Player for longer sounds (questions, words) - nullable, created lazily
   AudioPlayer? _mainPlayer;
   bool _isCreatingMainPlayer = false;
@@ -20,6 +28,9 @@ class AudioService {
 
   // Callback hook (optional, keep if used elsewhere)
   VoidCallback? onCongratsStart;
+
+  // Add private field for Random
+  final Random _random = Random();
 
   // Get or create the MAIN audio player instance
   Future<AudioPlayer?> _getMainPlayer() async {
@@ -124,7 +135,7 @@ class AudioService {
   }
 
   /// Plays short sound effects using the effect player.
-  /// Optionally stops the previous effect sound (defaults to true).
+  /// Returns a Future that completes when the audio finishes playing.
   Future<void> playShortSoundEffect(String audioPath, {bool stopPreviousEffect = true}) async {
      print("💥 Request to play on Effect: $audioPath (StopPrev: $stopPreviousEffect)");
      try {
@@ -139,11 +150,16 @@ class AudioService {
          await player.stop();
       }
 
-      // Using setAsset is generally fine for effects unless performance issues arise.
-      // If sounds get cut off or don't play reliably, consider `load()` + `seek(Duration.zero)`.
+      // Load and play the audio
       await player.setAsset(audioPath);
       await player.play();
-       print("💥 Playing on Effect: $audioPath -> Started");
+      print("💥 Playing on Effect: $audioPath -> Started");
+
+      // Wait for the audio to complete
+      await player.playerStateStream.firstWhere(
+        (state) => state.processingState == ProcessingState.completed
+      );
+      print("💥 Effect completed: $audioPath");
 
     } catch (e) {
       print('Error playing effect audio $audioPath: $e');
@@ -186,43 +202,56 @@ class AudioService {
 
   /// Plays the question audio for a word.
   Future<void> playQuestion(String word, int variation) async {
-    // Variation logic might need refinement, but uses main player.
-    final String audioPath = 'assets/audio/questions/${word}_question_1.mp3';
+    final String audioPath = '$_questionsAudioPath/${word}_question_1.mp3';
     await playAudio(audioPath);
   }
 
   /// Plays a word pronunciation.
   Future<void> playWord(String word) async {
-    await playAudio('assets/audio/words/${word.toLowerCase()}.mp3');
+    await playAudio('$_wordsAudioPath/${word.toLowerCase()}.mp3');
   }
-
-  // --- Methods using the EFFECT player (via playShortSoundEffect) ---
 
   /// Plays a letter sound (treated as a short effect).
   Future<void> playLetter(String letter) async {
-    await playShortSoundEffect('assets/audio/letters/${letter.toLowerCase()}_.mp3');
+    await playShortSoundEffect('$_lettersAudioPath/${letter.toLowerCase()}_.mp3');
   }
 
-  /// Plays congratulations audio (short success feedback).
+  /// Plays congratulations audio (randomized from available messages).
+  /// Returns a Future that completes when the audio finishes playing.
   Future<void> playCongratulations() async {
-    onCongratsStart?.call(); // Keep optional callback
-    await playShortSoundEffect('assets/audio/other/correct.mp3');
+    onCongratsStart?.call();
+    final int congratsNumber = _random.nextInt(20) + 1;  // We have 20 congrats messages
+    final String congratsPath = '$_congratsAudioPath/congrats_$congratsNumber.mp3';
+    final player = await _getEffectPlayer();
+    if (player == null) return;
+
+    try {
+      await player.setAsset(congratsPath);
+      await player.play();
+      print("💥 Playing congratulation: $congratsPath");
+      
+      // Wait for the audio to complete
+      await player.playerStateStream.firstWhere(
+        (state) => state.processingState == ProcessingState.completed
+      );
+      print("💥 Congratulation completed: $congratsPath");
+    } catch (e) {
+      print('Error playing congratulations audio: $e');
+    }
   }
 
   /// Plays incorrect sound feedback.
   Future<void> playIncorrect() async {
-    await playShortSoundEffect('assets/audio/other/wrong.mp3');
+    await playShortSoundEffect('$_audioBasePath/other/wrong.mp3');
   }
 
   /// Plays the pinata tap sound.
   Future<void> playPinataTap() async {
-    // Stops previous tap sound by default for rapid tapping feel
-    await playShortSoundEffect('assets/audio/other/bell.mp3', stopPreviousEffect: true);
+    await playShortSoundEffect('$_audioBasePath/other/bell.mp3', stopPreviousEffect: true);
   }
 
    /// Plays the pinata break sound.
   Future<void> playPinataBreak() async {
-    // Specifically does NOT stop the previous effect (the tap sound) immediately
-     await playShortSoundEffect('assets/audio/other/explosion.mp3', stopPreviousEffect: false);
+    await playShortSoundEffect('$_audioBasePath/other/explosion.mp3', stopPreviousEffect: false);
   }
 }

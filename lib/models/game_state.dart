@@ -174,44 +174,37 @@ class GameState extends ChangeNotifier {
 
     // 1. Advance Index
     currentIndex = (currentIndex + 1) % gameItems.length;
-    questionVariation = random.nextInt(3) + 1; // Example: Randomize question variation
+    questionVariation = random.nextInt(3) + 1;
 
-    final GameItem? newItem = currentItem; // Get the new current item
-
-    if (newItem == null) {
-      print("Error: Current item became null after index update.");
-      // Handle error state - maybe reset game or show message
-      _isLoading = true; // Indicate potential issue
-      notifyListeners();
+    // Get the NEW current item after index update
+    if (currentIndex >= gameItems.length) {
+      print("Error: Current index ${currentIndex} out of bounds");
       return;
     }
 
+    final GameItem newItem = gameItems[currentIndex];
     print("Showing next item: Index $currentIndex, Word: ${newItem.word}");
 
-    // 2. Reset Played Status for the *new* current item
-    // Ensures the question can be played for this item when its image appears
+    // 2. Reset Played Status for the new current item
     _playedQuestions.remove(newItem.word.toLowerCase());
     print("🔄 Reset played status for new word: ${newItem.word}");
 
-    // 3. Prepare Options for the new item
+    // 3. Generate new options
     currentOptions = newItem.generateOptions(allLetters);
     print("INFO: Generated ${currentOptions.length} options for ${newItem.word}: $currentOptions");
 
     // 4. Set Final State in One Go
-    isImageVisible = true;             // Make the new image visible
-    visibleLetterCount = currentOptions.length; // Set button count for the new options
-    coloredLetterCount = currentOptions.length; // Make new buttons appear active/colored
-    lettersAreDraggable = true;         // Enable dragging for new buttons
-    isQuestionPlaying = false;        // Reset any lingering question playing flag
+    isImageVisible = true;
+    visibleLetterCount = currentOptions.length;
+    coloredLetterCount = currentOptions.length;
+    lettersAreDraggable = true;
+    isQuestionPlaying = false;
 
     // 5. Notify UI to Rebuild
-    // This single notification updates the image and the buttons simultaneously.
     notifyListeners();
 
     print("showPreparedImage complete for ${newItem.word}. UI notified.");
-    // The question audio logic resides in the screen's build method,
-    // checking isImageVisible and hasQuestionBeenPlayed.
-}
+  }
 
 
   @override
