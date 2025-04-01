@@ -5,7 +5,7 @@ import 'dart:math';
 import 'dart:ui' as ui; // Needed for ui.Image
 import '../services/audio_service.dart'; // Assuming AudioService path
 
-// --- Helper Data Classes ---
+// --- Helper Data Classes (Keep _Star, _Satellite, _ShootingStar, _Burst, _Particle as they are) ---
 
 class _Star {
   final Offset position;
@@ -79,7 +79,6 @@ class _ShootingStar {
   }
 }
 
-// --- Burst Data Class (_Burst) ---
 class _Burst {
   final int id;
   final Offset position;
@@ -100,7 +99,6 @@ class _Burst {
     _addStatusListenerOnce(); // Add listener immediately
   }
 
-  // Safely add listener only once
   void _addStatusListenerOnce(){
      if (!_listenerAdded) {
         try {
@@ -119,7 +117,6 @@ class _Burst {
     }
   }
 
-   // Safely remove listener only once
    void _removeStatusListenerOnce() {
      if (_listenerAdded) {
        try {
@@ -149,7 +146,6 @@ class _Burst {
   }
 }
 
-// --- Particle Data Class (_Particle) ---
 class _Particle {
   final double angle; final double distance; final Color color; final double size; final double lifetimeFactor;
   _Particle({required this.angle, required this.distance, required this.color, required this.size, required this.lifetimeFactor });
@@ -292,9 +288,9 @@ class _FireworksScreenState extends State<FireworksScreen>
     super.dispose();
   }
 
-  // --- Background Element Generation ---
+  // --- Background Element Generation (Keep _generateStars, _generateSatellites, _addShootingStar as they are) ---
 
-  void _generateStars(Size size) {
+ void _generateStars(Size size) {
     if (!mounted) return;
     _stars = List.generate(150, (index) { return _Star( position: Offset(_random.nextDouble() * size.width, _random.nextDouble() * size.height), size: _random.nextDouble() * 1.5 + 0.5, opacity: _random.nextDouble() * 0.5 + 0.3, ); });
   }
@@ -315,33 +311,80 @@ class _FireworksScreenState extends State<FireworksScreen>
       catch (e) { print("Error creating/starting shooting star animation: $e"); controller?.dispose(); }
    }
 
-
-  // --- Event Handlers & Burst Logic ---
+  // --- Event Handlers & Burst Logic (Keep _handleTap, _playRandomFireworkSound, _addBurst as they are) ---
 
   void _handleTap(TapDownDetails details) { if (!mounted) return; _addBurst(details.localPosition); _playRandomFireworkSound(); }
   void _playRandomFireworkSound() { if (!mounted || _fireworkSounds.isEmpty) return; try { final soundPath = _fireworkSounds[_random.nextInt(_fireworkSounds.length)]; widget.audioService.playShortSoundEffect(soundPath, stopPreviousEffect: false); } catch(e) { print("Error playing firework sound: $e"); } }
   void _addBurst(Offset position) { if (!mounted) return; AnimationController? controller; try { if (!mounted) return; controller = AnimationController( duration: const Duration(milliseconds: 1200), vsync: this, ); final burst = _Burst( id: DateTime.now().millisecondsSinceEpoch + _random.nextInt(1000), position: position, controller: controller, particleCount: 40 + _random.nextInt(40), maxDistance: 80 + _random.nextDouble() * 80, baseColor: Colors.primaries[_random.nextInt(Colors.primaries.length)], random: _random, onComplete: (id) { if (mounted) { setState(() { _bursts.removeWhere((b) => b.id == id); }); } }, ); if (mounted) { setState(() { _bursts.add(burst); }); controller.forward(); } else { controller.dispose(); } } catch (e) { print("Error creating/starting burst animation: $e"); controller?.dispose(); } }
 
-  // --- Build Method ---
 
+  // --- Build Method ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      // backgroundColor: Colors.black, // REMOVED - Background image will cover this
       body: GestureDetector(
         onTapDown: _handleTap,
         behavior: HitTestBehavior.opaque,
         child: Stack(
           children: [
-             // --- Background Layer ---
-             CustomPaint(
-                 painter: _BackgroundPainter( stars: _stars, satellites: _satellites, shootingStars: List.from(_shootingStars), satelliteController: _satelliteController, moonImage: _moonImage, moonRotationAnimation: _moonRotationAnimation, ), // Pass animation
-                 size: Size.infinite,
+            // --- Background Image Layer --- <--- NEW
+            Positioned.fill( // Ensures the image fills the stack
+              child: Image.asset(
+                'assets/images/pinata/night_sky.png',
+                fit: BoxFit.cover, // Cover the whole screen, cropping if necessary
               ),
+            ),
+
+            // --- Background Elements Layer (Stars, Moon, Satellites, Shooting Stars) ---
+            CustomPaint(
+              painter: _BackgroundPainter(
+                stars: _stars,
+                satellites: _satellites,
+                shootingStars: List.from(_shootingStars),
+                satelliteController: _satelliteController,
+                moonImage: _moonImage,
+                moonRotationAnimation: _moonRotationAnimation,
+              ),
+              size: Size.infinite,
+            ),
+
             // --- Particle Bursts Layer ---
-             if (_bursts.isNotEmpty) CustomPaint( painter: _FireworksPainter(bursts: List.from(_bursts)), size: Size.infinite, ),
+            if (_bursts.isNotEmpty)
+              CustomPaint(
+                painter: _FireworksPainter(bursts: List.from(_bursts)),
+                size: Size.infinite,
+              ),
+
             // --- Animated Text Layer ---
-            Center( child: FadeTransition( opacity: _textOpacityAnimation, child: ScaleTransition( scale: _textScaleAnimation, child: Text( 'Awesome!', style: TextStyle( fontSize: 70, color: Colors.yellow[600], fontWeight: FontWeight.bold, shadows: const [ Shadow( offset: Offset(0, 0), blurRadius: 15.0, color: Colors.orangeAccent), Shadow( offset: Offset(2.0, 2.0), blurRadius: 4.0, color: Colors.black87), ], ), ), ), ), ),
+            Center(
+              child: FadeTransition(
+                opacity: _textOpacityAnimation,
+                child: ScaleTransition(
+                  scale: _textScaleAnimation,
+                  child: Text(
+                    'Awesome!',
+                    style: TextStyle(
+                      fontSize: 70,
+                      color: Colors.yellow[600],
+                      fontWeight: FontWeight.bold,
+                      shadows: const [
+                        Shadow(
+                          offset: Offset(0, 0),
+                          blurRadius: 15.0,
+                          color: Colors.orangeAccent,
+                        ),
+                        Shadow(
+                          offset: Offset(2.0, 2.0),
+                          blurRadius: 4.0,
+                          color: Colors.black87,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -350,8 +393,7 @@ class _FireworksScreenState extends State<FireworksScreen>
 } // End of _FireworksScreenState
 
 
-// --- Fireworks Painter (_FireworksPainter) ---
-// Draws the colorful particle bursts
+// --- Fireworks Painter (_FireworksPainter - Keep as is) ---
 class _FireworksPainter extends CustomPainter {
   final List<_Burst> bursts;
   final Paint _paint = Paint();
@@ -368,7 +410,7 @@ class _FireworksPainter extends CustomPainter {
 }
 
 
-// --- Background Painter ---
+// --- Background Painter (_BackgroundPainter - Keep as is) ---
 // Draws stars, moon (image), satellites, and shooting stars
 class _BackgroundPainter extends CustomPainter {
   final List<_Star> stars; final List<_Satellite> satellites; final List<_ShootingStar> shootingStars; final AnimationController satelliteController; final ui.Image? moonImage; final Animation<double> moonRotationAnimation;
