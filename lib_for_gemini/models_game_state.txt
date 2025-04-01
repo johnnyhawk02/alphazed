@@ -172,50 +172,92 @@ class GameState extends ChangeNotifier {
 
     int nextIndex = (currentIndex + 1) % gameItems.length;
 
-    // Optional: Could clear played status here if needed *before* showing,
-    // but current logic clears it in showPreparedImage which seems safer.
-    // _playedQuestions.remove(gameItems[nextIndex].word.toLowerCase());
+    // Validate the image path before returning it
+    final imagePath = gameItems[nextIndex].imagePath;
+    
+    try {
+      // Basic path validation
+      if (imagePath.isEmpty) {
+        print("WARNING: Empty image path detected for next item");
+        return null;
+      }
 
-    print("Preparing next image path: ${gameItems[nextIndex].imagePath}");
-    return gameItems[nextIndex].imagePath;
+      // Check if the imagePath has a valid extension
+      bool hasValidExtension = ['.png', '.jpg', '.jpeg', '.webp', '.gif']
+          .any((ext) => imagePath.toLowerCase().endsWith(ext));
+      
+      if (!hasValidExtension) {
+        print("WARNING: Image path doesn't have valid image extension: $imagePath");
+        return null;
+      }
+      
+      print("Preparing next image path: $imagePath");
+      return imagePath;
+    } catch (e) {
+      print("ERROR: Failed to validate next image path: $e");
+      return null;
+    }
   }
 
   // Method called AFTER an interaction (like Pinata) to display the next item
   Future<void> showPreparedImage() async {
-    if (gameItems.isEmpty) return;
-
-    // 1. Advance Index
-    currentIndex = (currentIndex + 1) % gameItems.length;
-    questionVariation = random.nextInt(3) + 1;
-
-    // Get the NEW current item after index update
-    if (currentIndex >= gameItems.length) {
-      print("Error: Current index ${currentIndex} out of bounds");
+    if (gameItems.isEmpty) {
+      print("WARN: showPreparedImage called with empty gameItems.");
       return;
     }
 
+    print("--- showPreparedImage START ---");
+
+    // Save the current word before advancing the index
+    final String previousWord = currentIndex < gameItems.length ? gameItems[currentIndex].word.toLowerCase() : "";
+    
+    // 1. Advance Index
+    currentIndex = (currentIndex + 1) % gameItems.length;
+    questionVariation = random.nextInt(3) + 1; // Assuming 3 variations max
+    print("  Index advanced to: $currentIndex");
+
+    // 2. Get the NEW current item *after* index update
+    if (currentIndex >= gameItems.length) {
+      print("ERROR: Current index $currentIndex out of bounds after update!");
+      // Reset index or handle error appropriately
+      currentIndex = 0;
+      if (gameItems.isEmpty) return; // Double check after potential reset
+    }
     final GameItem newItem = gameItems[currentIndex];
-    print("Showing next item: Index $currentIndex, Word: ${newItem.word}");
+    print("  New current item: ${newItem.word} (Index: $currentIndex)");
 
-    // 2. Reset Played Status for the new current item
-    _playedQuestions.remove(newItem.word.toLowerCase());
-    print("🔄 Reset played status for new word: ${newItem.word}");
+    // 3. Reset Played Status for the PREVIOUS word
+    if (previousWord.isNotEmpty) {
+      _playedQuestions.remove(previousWord);
+      print("  Reset played status for previous word: $previousWord");
+    }
 
-    // 3. Generate new options
-    currentOptions = newItem.generateOptions(allLetters);
-    print("INFO: Generated ${currentOptions.length} options for ${newItem.word}: $currentOptions");
+    // 4. Generate new options for the *new* item
+    final List<String> newOptions = newItem.generateOptions(allLetters);
+    print("  Generated ${newOptions.length} options for ${newItem.word}: $newOptions");
 
-    // 4. Set Final State in One Go
-    isImageVisible = true;
-    visibleLetterCount = currentOptions.length;
-    coloredLetterCount = currentOptions.length;
-    lettersAreDraggable = true;
-    isQuestionPlaying = false;
+    // --- ATOMIC STATE UPDATE ---
+    // Update all relevant state variables *before* notifying listeners
 
-    // 5. Notify UI to Rebuild
+    // a. Set the generated options
+    currentOptions = newOptions;
+
+    // b. Explicitly set counts based on FIXED_COUNT (which should be 3)
+    const int FIXED_COUNT = 3;
+    visibleLetterCount = FIXED_COUNT;
+    coloredLetterCount = FIXED_COUNT; // Assuming all start colored
+
+    // c. Set other relevant states
+    lettersAreDraggable = true; // Letters should be draggable for the new item
+    isImageVisible = true;      // Show the image for the new item
+    isQuestionPlaying = false;  // Reset question playing flag
+
+    print("  State prepared: visible=$visibleLetterCount, colored=$coloredLetterCount, draggable=$lettersAreDraggable, imageVisible=$isImageVisible");
+    print("  Final currentOptions state: $currentOptions");
+
+    // 5. Notify UI to Rebuild *ONCE* after all state is set
     notifyListeners();
-
-    print("showPreparedImage complete for ${newItem.word}. UI notified.");
+    print("--- showPreparedImage COMPLETE - Listeners Notified ---");
   }
 
 

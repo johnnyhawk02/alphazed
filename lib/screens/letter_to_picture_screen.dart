@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
+import 'dart:async'; // Keep Completer for image preloading test
 import '../config/game_config.dart';
-import '../models/game_state.dart'; // Uses the GameState WITHOUT GamePhase
+import '../models/game_state.dart';
 import '../services/audio_service.dart';
 import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
 import '../widgets/color_picker_dialog.dart';
 import 'pinata_screen.dart';
-import 'fireworks_screen.dart';
-import 'ripple_screen.dart'; // Assuming ripple_screen.dart exists
+import 'dot_swish_screen.dart';
+import 'ripple_screen.dart';
+import 'monster_mash_screen.dart'; // <-- Import the new screen
 import 'base_game_screen.dart';
 
 // --- LetterPictureMatch Screen Widget ---
@@ -29,29 +30,42 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
   @override
   void initState() {
     super.initState();
+    // Any specific init logic for this screen
   }
-  
+
   // Override buildGameAppBar to show current word instead of static title
   @override
   PreferredSizeWidget buildGameAppBar() {
     // Get the current word from gameState using Provider.of instead of Consumer
     final GameState gameState = Provider.of<GameState>(context, listen: true);
     final String displayTitle = gameState.currentItem?.word.toLowerCase() ?? "picture matching";
-    
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     return AppBar(
       elevation: 1,
       backgroundColor: Colors.transparent,
       centerTitle: true,
       toolbarHeight: 70,
       automaticallyImplyLeading: false, // Disable back button
-      title: Text(
-        displayTitle,
-        style: GameConfig.titleTextStyle,
+      title: Container(
+        // Consider adjusting width or using FittedBox if titles are long
+        width: screenWidth / 2, // Adjusted width slightly
+        child: Text(
+          displayTitle,
+          style: GameConfig.titleTextStyle.copyWith(
+            fontSize: 35.0,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis, // Handle long words
+          maxLines: 1,
+        ),
       ),
       actions: [
         // Add the color options menu
         IconButton(
           icon: const Icon(Icons.color_lens),
+          tooltip: 'Change Background Color', // Added tooltip
           onPressed: () {
             _showColorPickerDialog();
           },
@@ -59,8 +73,8 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
       ],
     );
   }
-  
-  // Add the missing _showColorPickerDialog method
+
+  // Add the missing _showColorPickerDialog method (assuming it's the same as in base class, but added here for clarity)
   void _showColorPickerDialog() {
     showDialog(
       context: context,
@@ -74,38 +88,42 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
     final screenHeight = mediaQuery.size.height;
-    
+
     // Check if device is likely an iPad (using aspect ratio and screen size)
     bool isIpad = mediaQuery.size.shortestSide >= 600 &&
                 (screenWidth / screenHeight).abs() < 1.6;
-    
+
     // Use device-specific flex values from GameConfig
-    final int imageAreaFlexValue = isIpad 
-        ? GameConfig.ipadImageAreaFlex 
+    final int imageAreaFlexValue = isIpad
+        ? GameConfig.ipadImageAreaFlex
         : GameConfig.iphoneImageAreaFlex;
-        
-    final int buttonAreaFlexValue = isIpad 
-        ? GameConfig.ipadLetterButtonsFlex 
+
+    final int buttonAreaFlexValue = isIpad
+        ? GameConfig.ipadLetterButtonsFlex
         : GameConfig.iphoneLetterButtonsFlex;
-    
+
     return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
+      // Consider adding mainAxisAlignment if needed, e.g., MainAxisAlignment.spaceAround
       children: [
         // --- Image Area ---
         Expanded(
           flex: imageAreaFlexValue,
           child: Container(
-            key: targetContainerKey,
+            key: targetContainerKey, // Ensure base class key is used
+            alignment: Alignment.center, // Center the drop target within Expanded
             child: buildImageDropTarget(gameState, audioService),
           ),
         ),
+        // Add some spacing unless in full screen mode
         if (!fullScreenMode) SizedBox(height: GameConfig.defaultPadding * 1.5),
         // --- Letter Buttons Area ---
         Expanded(
           flex: buttonAreaFlexValue,
           child: buildLetterGrid(gameState, audioService),
         ),
+        // Spacing at the bottom
         if (!fullScreenMode) SizedBox(height: GameConfig.defaultPadding),
+        // Add bottom padding if in full screen to avoid system navigation
         if (fullScreenMode) SizedBox(height: MediaQuery.of(context).padding.bottom + GameConfig.defaultPadding),
       ],
     );
@@ -116,43 +134,51 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     // --- Placeholder Logic ---
     if (!gameState.isImageVisible || !gameState.gameStarted || gameState.currentItem == null) {
       print("INFO: Image not visible, game not started, or currentItem is null. Showing placeholder.");
+      // Return an empty container or a placeholder widget
       return Container(
         decoration: const BoxDecoration(color: Colors.transparent),
-        child: const Center(child: SizedBox.shrink()),
+        child: const Center(child: SizedBox.shrink()), // Or CircularProgressIndicator()
       );
     }
 
     final currentItem = gameState.currentItem!;
 
     // --- Play Question Audio ---
-    if (!gameState.hasQuestionBeenPlayed(currentItem.word)) {
-      print('🎯 Attempting to play question for: ${currentItem.word}');
-      gameState.markQuestionAsPlayed(currentItem.word);
-      Future.microtask(() async {
-        try {
-          await audioService.playQuestion(currentItem.word, gameState.questionVariation);
-          print('🎧 Question audio playback initiated for ${currentItem.word}');
-        } catch (e) { print('💥 Error playing question audio for ${currentItem.word}: $e'); }
-      });
-    } else {
-      print('⏭️ Skipping question for: ${currentItem.word} - already played.');
-    }
+    // Schedule audio play after the build phase completes to avoid issues
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !gameState.hasQuestionBeenPlayed(currentItem.word)) {
+            print('🎯 Attempting to play question for: ${currentItem.word}');
+            gameState.markQuestionAsPlayed(currentItem.word);
+            audioService.playQuestion(currentItem.word, gameState.questionVariation)
+                .then((_) => print('🎧 Question audio playback initiated for ${currentItem.word}'))
+                .catchError((e) => print('💥 Error playing question audio for ${currentItem.word}: $e'));
+        } else if (mounted) {
+            print('⏭️ Skipping question for: ${currentItem.word} - already played or widget not mounted.');
+        }
+    });
+
 
     // --- Display Actual Image ---
+    // Use Hero for potential transitions (ensure tag uniqueness)
     return Hero(
-      tag: 'game_image_${currentItem.imagePath}',
+      tag: 'game_image_${currentItem.imagePath}', // Unique tag per image
       child: Center(
         child: AspectRatio(
-          aspectRatio: 1.0, // Keep image as a square
+          aspectRatio: 1.0, // Keep image aspect ratio (usually square)
           child: ImageDropTarget(
-            key: ValueKey(currentItem.imagePath),
+            // Use ValueKey for efficient updates when item changes
+            key: ValueKey('drop_target_${currentItem.imagePath}'),
             item: currentItem,
             onLetterAccepted: (letter) async {
+              // This callback is triggered when a letter is successfully dropped
               if (letter.toLowerCase() != currentItem.firstLetter.toLowerCase()) {
                 print("❌ Incorrect letter '$letter' dropped (Audio Trigger)");
-                audioService.playIncorrect();
+                // Incorrect feedback sound is handled by the DropTarget via ThemeProvider flash
+                // but we can play an additional sound if needed
+                 audioService.playIncorrect();
               } else {
-                print("✅ Correct letter '$letter' dropped (Audio handled by button)");
+                print("✅ Correct letter '$letter' dropped (Audio handled by button/drag success)");
+                // Correct feedback is handled by the LetterButton's onDragSuccess
               }
             },
           ),
@@ -165,16 +191,15 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
   @override
   Widget buildLetterGrid(GameState gameState, AudioService audioService) {
     // --- Debug Logging ---
-    print('--- Building Letter Grid ---');
-    print('Current Item: ${gameState.currentItem?.word ?? "None"}');
-    print('Current Options: ${gameState.currentOptions} (Count: ${gameState.currentOptions.length})');
-    print('Visible Letter Count: ${gameState.visibleLetterCount}');
-    print('Colored Letter Count: ${gameState.coloredLetterCount}');
-    print('Letters Draggable: ${gameState.lettersAreDraggable}');
-    print('--------------------------');
+    // print('--- Building Letter Grid ---');
+    // print('Current Item: ${gameState.currentItem?.word ?? "None"}');
+    // print('Current Options: ${gameState.currentOptions}');
+    // print('Letters Draggable: ${gameState.lettersAreDraggable}');
+    // print('--------------------------');
 
     // --- Calculate Sizes ---
     final screenWidth = MediaQuery.of(context).size.width;
+    // Button size and padding factors from GameConfig
     final buttonSize = screenWidth * GameConfig.letterButtonSizeFactor;
     final buttonPadding = screenWidth * GameConfig.letterButtonPaddingFactor;
 
@@ -182,19 +207,18 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     final currentItem = gameState.currentItem;
 
     // --- Handle Empty State ---
-    if (currentItem == null) {
-      print("WARN: buildLetterGrid called with null item. Rendering empty.");
-      return const Center(child: SizedBox.shrink());
+    if (currentItem == null || gameState.currentOptions.isEmpty) {
+      print("WARN: buildLetterGrid called with null item or no options. Rendering empty.");
+      return const Center(child: SizedBox.shrink()); // Or a loading indicator
     }
 
     // --- Normalize options to always have exactly 3 letters ---
-    // Ensure we have exactly 3 options, even if GameState provides fewer or more
     const int FIXED_COUNT = 3;
-    final List<String> normalizedOptions = List<String>.filled(FIXED_COUNT, "?");
+    final List<String> normalizedOptions = List<String>.filled(FIXED_COUNT, "?"); // Fill with placeholder
     for (int i = 0; i < FIXED_COUNT && i < gameState.currentOptions.length; i++) {
       normalizedOptions[i] = gameState.currentOptions[i];
     }
-    print("Normalized options: $normalizedOptions (from original: ${gameState.currentOptions})");
+    // print("Normalized options: $normalizedOptions (from original: ${gameState.currentOptions})");
 
     // --- Prepare Correct Letter Info ---
     final String correctFirstLetterLower = currentItem.firstLetter.toLowerCase();
@@ -202,11 +226,11 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
 
     // --- Build Button Row ---
     return Center(
-      child: SingleChildScrollView(
+      child: SingleChildScrollView( // Allow horizontal scrolling if buttons overflow
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(vertical: GameConfig.defaultPadding),
+        padding: EdgeInsets.symmetric(vertical: GameConfig.defaultPadding), // Add vertical padding if needed
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center, // Center buttons horizontally
           children: List.generate(
             FIXED_COUNT,
             (index) {
@@ -214,84 +238,75 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
               final String currentLetterLower = currentLetter.toLowerCase();
               final bool isThisTheCorrectLetter = currentLetterLower == correctFirstLetterLower;
 
-              print("BUILDING LetterButton: index=$index, letter='$currentLetter'");
+              // print("BUILDING LetterButton: index=$index, letter='$currentLetter'");
 
               // Add padding around each button
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: buttonPadding),
-                // --- Reverted back to LetterButton --- 
                 child: LetterButton(
-                  // Make key more specific to the current word and letter/index
+                  // Ensure key uniqueness: depends on item, letter, and index
                   key: ValueKey('letter_${currentItem.word}_${currentLetter}_$index'),
                   letter: currentLetter,
                   isCorrectLetter: isThisTheCorrectLetter,
                   onTap: () => audioService.playLetter(currentLetter),
-                  colored: index < gameState.coloredLetterCount, // Keep existing color logic
+                  // Visibility/Coloring based on GameState (adjust logic if needed)
+                  colored: index < gameState.coloredLetterCount, // Or always true if they should always be visible
                   draggable: areButtonsDraggable,
                   onDragSuccess: (wasCorrectDrop) async {
                     if (!mounted) return;
 
                     if (wasCorrectDrop) {
                       print("✅ Correct letter '$currentLetter' matched! (Screen notified)");
+
+                      // Play congrats sound and wait for it (optional)
                       await audioService.playCongratulations();
-                      // Access GameState using Provider within the async callback if needed
+
+                      // Access GameState safely within the async callback
                       final currentGameState = Provider.of<GameState>(context, listen: false);
-                      currentGameState.markQuestionAsPlayed(currentItem.word);
+
+                       // Mark question as played *after* congrats? Or immediately? Choose one.
+                       // currentGameState.markQuestionAsPlayed(currentItem.word); // Moved potentially
 
                       String? nextImagePath;
                       try {
                         print("🚀 Preparing next image before Celebration...");
                         nextImagePath = await currentGameState.prepareNextImage();
                         if (nextImagePath != null && mounted) {
-                          try {
-                            // Check if the file exists using resolveImage and wait for load
-                            final ImageConfiguration config = ImageConfiguration();
-                            final AssetImage image = AssetImage(nextImagePath);
-                            final ImageStream stream = image.resolve(config);
-                            
-                            Future<bool> testImage() {
-                              Completer<bool> completer = Completer<bool>();
-                              stream.addListener(ImageStreamListener(
-                                (ImageInfo info, bool _) {
-                                  completer.complete(true);
-                                },
-                                onError: (dynamic error, StackTrace? stackTrace) {
-                                  print("⚠️ Error testing image load: $nextImagePath\nError: $error");
-                                  completer.complete(false);
-                                },
-                              ));
-                              return completer.future;
-                            }
-                            
-                            bool imageOk = await testImage();
-                            
-                            if (imageOk && mounted) {
-                              precacheImage(AssetImage(nextImagePath), context).then((_) {
-                                print("🖼️ Precached image: $nextImagePath");
-                              }).catchError((e, s) {
-                                print("⚠️ Failed to precache image: $nextImagePath, Error: $e\n$s");
-                              });
-                            } else {
-                              print("⚠️ Skipping precache for invalid image: $nextImagePath");
-                            }
-                          } catch (e) {
-                            print("⚠️ Error validating image: $nextImagePath, Error: $e");
-                          }
+                          // Precache the next image in the background
+                           print("🖼️ Preloading image: $nextImagePath");
+                           precacheImage(AssetImage(nextImagePath), context).then((_) {
+                             print("✅ Precached image SUCCESS: $nextImagePath");
+                           }).catchError((e, s) {
+                             print("⚠️ Failed to precache image: $nextImagePath, Error: $e\n$s");
+                             // Don't block navigation if precaching fails
+                           });
+
+                           // --- Simpler Validation (optional - remove if precache is enough) ---
+                           // You could add a simple check here if the path looks valid,
+                           // but relying on precache error handling might be sufficient.
+                           // bool isValidPath = nextImagePath.toLowerCase().endsWith('.png') || ... ;
+                           // if (!isValidPath) { print("⚠️ Invalid image path format: $nextImagePath"); }
+                           // --- End Simpler Validation ---
+
+                        } else if (nextImagePath == null) {
+                           print("🤔 No next image path returned by GameState.");
                         }
                       } catch (e) {
-                        print("💥 Error preparing next image: $e");
+                        print("💥 Error preparing or precaching next image: $e");
+                        // Handle error gracefully, maybe proceed without preloading
                       }
 
+                      // Ensure we're still mounted before navigating
                       if (mounted) {
                         // Pass the GameState obtained from Provider
                         _navigateToNextCelebration(currentGameState, audioService);
                       }
                     } else {
                       print("❌ Incorrect letter '$currentLetter' drop processed. (Screen notified)");
+                      // Incorrect sound/feedback is handled by DropTarget/LetterButton itself
                     }
                   },
                 ),
-                // --- End of Revert ---
               );
             },
           ),
@@ -303,7 +318,7 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
   // --- Helper Method for Sequential Navigation ---
   void _navigateToNextCelebration(GameState gameState, AudioService audioService) {
 
-    // --- Check Developer Setting --- 
+    // --- Check Developer Setting ---
     if (!GameConfig.showCelebrationScreens) {
       print("DEV SETTING: Skipping celebration screen.");
       // Directly trigger the logic that happens after celebration
@@ -312,7 +327,8 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
         if(mounted) {
             print("🔄 Requesting GameState to show prepared image (celebration skipped)...");
             // Access gameState directly since it's passed into this method
-            gameState.showPreparedImage(); 
+            // Ensure showPreparedImage is robust against null items if game ends etc.
+            gameState.showPreparedImage();
         }
       });
       return; // Exit the function early
@@ -321,35 +337,58 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     // --- Original Celebration Logic (only runs if showCelebrationScreens is true) ---
     final List<Widget Function(AudioService, VoidCallback)> celebrationScreenFactories = [
       (audio, onComplete) => PinataScreen(audioService: audio, onComplete: onComplete),
-      (audio, onComplete) => FireworksScreen(audioService: audio, onComplete: onComplete),
+      (audio, onComplete) => DotSwishScreen(audioService: audio, onComplete: onComplete),
       (audio, onComplete) => RippleScreen(audioService: audio, onComplete: onComplete),
+      (audio, onComplete) => MonsterMashScreen(audioService: audio, onComplete: onComplete), // <-- Added new screen
     ];
 
+    // Get the index for the next screen in the cycle
     final int screenIndex = gameState.getAndIncrementNextCelebrationIndex(celebrationScreenFactories.length);
-    if (screenIndex >= celebrationScreenFactories.length || screenIndex < 0) { /* Handle error */ return; }
+
+    // Basic safety check for the index
+    if (screenIndex < 0 || screenIndex >= celebrationScreenFactories.length) {
+       print("Error: Invalid celebration screen index: $screenIndex. Resetting index.");
+       // Optionally reset the index in GameState here if needed, or just default to 0
+       // gameState.resetCelebrationIndex(); // Assuming such a method exists
+       // Fallback to the first screen or handle error differently
+       final selectedScreenFactory = celebrationScreenFactories[0]; // Fallback
+    }
+
     final selectedScreenFactory = celebrationScreenFactories[screenIndex];
 
+    // Define what happens when the celebration screen finishes
     final VoidCallback onCelebrationComplete = () {
       if (mounted) {
         print("🎉 Celebration complete. Popping screen.");
-        if(Navigator.canPop(context)) { Navigator.of(context).pop(); }
-        else { print("WARN: Cannot pop celebration screen."); }
+        // Safely pop the route if possible
+        if(Navigator.canPop(context)) {
+            Navigator.of(context).pop();
+        } else {
+            print("WARN: Cannot pop celebration screen. Already popped?");
+        }
 
-        // REVERTED: Call original showPreparedImage directly
+        // Schedule the GameState update for the next frame
         WidgetsBinding.instance.addPostFrameCallback((_) {
             if(mounted) {
+                // Get potentially updated GameState instance
                 final postCelebrationGameState = Provider.of<GameState>(context, listen: false);
                 print("🔄 Requesting GameState to show prepared image post-celebration...");
-                postCelebrationGameState.showPreparedImage(); // Call the existing method
+                postCelebrationGameState.showPreparedImage(); // Call the state update method
             }
         });
+      } else {
+         print("WARN: onCelebrationComplete called but widget is not mounted.");
       }
     };
 
+    // Create the celebration screen widget instance
     final celebrationScreen = selectedScreenFactory(audioService, onCelebrationComplete);
 
+    // Navigate to the celebration screen
     Navigator.of(context).push(
-      MaterialPageRoute( builder: (context) => celebrationScreen, ),
+      // Use MaterialPageRoute or a custom route if needed
+      MaterialPageRoute( builder: (context) => celebrationScreen ),
     );
   }
+
 } // End of _LetterPictureMatchState

@@ -24,7 +24,7 @@ class PinataWidget extends StatefulWidget {
     required this.audioService,
     this.onCompletelyGone,
     this.onTap,
-    this.requiredTaps = 3,
+    this.requiredTaps = 3, // Default value
   }) : super(key: key);
 
   @override
@@ -48,7 +48,8 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
   int _tapCount = 0;
   bool _isFlyingOff = false;
   bool _isCompletelyGone = false;
-  bool _confettiFinished = false;  // Track if confetti animation has finished
+  bool _confettiFinished = false; // Track if confetti animation has finished
+  bool _explosionTriggered = false; // Flag to ensure explosion happens once
 
   // Configuration
   Offset _flyOffDirection = Offset.zero;
@@ -82,21 +83,17 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
       duration: const Duration(milliseconds: 700),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: _initialScale, end: _initialScale).animate(_flyOffController);
-    _positionAnimation = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(_flyOffController);
-     _flyOffController.addStatusListener((status) {
+    _scaleAnimation = ConstantTween<double>(_initialScale).animate(_flyOffController);
+    _positionAnimation = ConstantTween<Offset>(Offset.zero).animate(_flyOffController);
+    _flyOffController.addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           if (mounted) {
-            // Instead of immediately marking as completely gone, 
-            // we'll only do so if the confetti has finished too
-            if (_confettiFinished) {
-              setState(() { _isCompletelyGone = true; });
-              widget.onCompletelyGone?.call();
-            } else {
-              // If confetti is still playing, we'll wait for it
-              // When confetti finishes, our confetti listener will
-              // check if fly-off is done and then call onCompletelyGone
-            }
+             if (_confettiFinished) {
+                 if (!_isCompletelyGone) {
+                     setState(() { _isCompletelyGone = true; });
+                     widget.onCompletelyGone?.call();
+                 }
+             }
           }
         }
      });
@@ -104,16 +101,14 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
     // --- Confetti Setup ---
     _sparkController = ConfettiController(duration: const Duration(milliseconds: 2500));
     _sparkController.addListener(() {
-      // Check if the controller is stopped and confetti animation is complete
       if (_sparkController.state == ConfettiControllerState.stopped && _isBroken && !_confettiFinished) {
-        setState(() {
-          _confettiFinished = true;
-        });
-        // Check if both animations are done
-        _checkAnimationsComplete();
+          if (mounted) {
+              setState(() { _confettiFinished = true; });
+              _checkAnimationsComplete();
+          }
       }
     });
-    
+
     for (int i = 0; i < 5; i++) {
       _sparkControllers.add(ConfettiController(duration: const Duration(milliseconds: 300)));
     }
@@ -142,7 +137,6 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
   }
 
   // --- Animation Setup Helpers ---
-
   void _setupRotationAnimation() {
     final direction = _random.nextBool() ? 1.0 : -1.0;
     final intensity = 0.05 + (_random.nextDouble() * 0.15);
@@ -164,74 +158,80 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
     _flyOffDirection = Offset(math.cos(angle), math.sin(angle));
     _scaleAnimation = Tween<double>(begin: _initialScale, end: 0.0)
         .animate(CurvedAnimation(parent: _flyOffController, curve: Curves.easeIn));
-    _positionAnimation = Tween<Offset>(begin: Offset.zero, end: _flyOffDirection * 15.0)
+    _positionAnimation = Tween<Offset>(begin: Offset.zero, end: _flyOffDirection * 20.0)
         .animate(CurvedAnimation(parent: _flyOffController, curve: Curves.easeOutExpo));
   }
 
-  // --- Sound Playback Helpers (using updated AudioService) ---
-
+  // --- Sound Playback Helpers ---
   void _playTapSound() {
-     widget.audioService.playPinataTap();
+     widget.audioService.playPinataTap().catchError((e) => print("Error playing tap sound: $e"));
   }
 
   void _playBreakSound() {
-     widget.audioService.playPinataBreak();
+     widget.audioService.playPinataBreak().catchError((e) => print("Error playing break sound: $e"));
   }
 
   // --- Main Interaction Logic ---
-
-  // Make async only for the delayed fly-off, not for sound timing
   void _handleTap() {
-    if (_isBroken || _isFlyingOff || _isCompletelyGone) return;
+    if (!mounted || _isBroken || _isFlyingOff || _isCompletelyGone) return;
 
     setState(() { _tapCount++; });
 
-    // Play tap sound for EVERY tap using the dedicated effect method
     _playTapSound();
 
-    // Show tap spark effect
-    final index = _random.nextInt(_sparkControllers.length);
-    _sparkControllers[index].play();
+    // Show tap spark effect randomly
+    if (_sparkControllers.isNotEmpty) {
+        final index = _random.nextInt(_sparkControllers.length);
+        // *** REMOVED .isDisposed CHECK ***
+        _sparkControllers[index].play();
+    }
 
     // Trigger wobble animation
-    _setupRotationAnimation();
-    _wobbleController.forward(from: 0.0);
+    if (!_wobbleController.isAnimating) {
+        _setupRotationAnimation();
+        _wobbleController.forward(from: 0.0);
+    }
 
-    // Check for final tap
-    if (_tapCount >= widget.requiredTaps) {
-      if (mounted) { setState(() { _isBroken = true; }); }
+    // --- Check for Break Condition (Final Tap) ---
+    if (_tapCount >= widget.requiredTaps && !_explosionTriggered) {
+      _explosionTriggered = true;
+
+      print("Pinata breaking! Tap count: $_tapCount");
+
+      // Set state and call callbacks
+      setState(() { _isBroken = true; });
       widget.onBroken();
       _driftController.stop();
 
-      // Play explosion confetti and break sound (uses effect player, won't stop tap sound)
-      if (_sparkController.state == ConfettiControllerState.stopped) {
-        _sparkController.play();
-      }
-      _playBreakSound(); // Play IMMEDIATELY after tap sound - separate players handle it
+      // Play explosion confetti & sound (Guarded by flag)
+      // *** REMOVED .isDisposed CHECK ***
+      _sparkController.play();
+      _playBreakSound();
 
-      // Start Fly-Off sequence after a visual delay
+      // Delayed start for fly-off
       Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted && !_isFlyingOff) {
-          setState(() { _isFlyingOff = true; });
-          _setupFlyOffAnimation();
-          _flyOffController.forward(from: 0.0);
-        }
+         if (mounted && !_isFlyingOff) {
+             print("Starting fly-off animation...");
+             setState(() { _isFlyingOff = true; });
+             _setupFlyOffAnimation();
+             _flyOffController.forward(from: 0.0);
+         }
       });
     }
   }
 
-  // Check if both animations are complete and trigger callback if needed
+
+  // Check if both fly-off and confetti are complete
   void _checkAnimationsComplete() {
-    if (mounted && _confettiFinished && _flyOffController.status == AnimationStatus.completed && !_isCompletelyGone) {
-      setState(() { 
-        _isCompletelyGone = true; 
-      });
-      widget.onCompletelyGone?.call();
-    }
+     if (mounted && _confettiFinished && _flyOffController.isCompleted && !_isCompletelyGone) {
+         print("Both fly-off and confetti finished.");
+         setState(() { _isCompletelyGone = true; });
+         widget.onCompletelyGone?.call();
+     }
   }
+
 
   // --- Build Method ---
-
   @override
   Widget build(BuildContext context) {
     if (_isCompletelyGone) {
@@ -239,24 +239,16 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
     }
 
     final imagePath = _isBroken ? widget.brokenImagePath : widget.intactImagePath;
-    
-    // Get screen width for scaling
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    // --- Scaled Confetti Parameters ---
-    // Tap Sparks Scaling
-    final double tapSparkScaleFactor = (screenWidth / 400).clamp(0.5, 1.5); // Base width 400px
-    final int tapSparkParticles = (5 * tapSparkScaleFactor).toInt();
-    final Size tapSparkMinSize = Size(5 * tapSparkScaleFactor, 15 * tapSparkScaleFactor);
-    final Size tapSparkMaxSize = Size(10 * tapSparkScaleFactor, 25 * tapSparkScaleFactor);
-    
-    // Main Explosion Scaling
-    final double explosionScaleFactor = (screenWidth / 400).clamp(0.7, 2.0);
-    final int explosionParticles = (300 * explosionScaleFactor).toInt();
-    final double explosionMaxForce = 30 * explosionScaleFactor;
-    final double explosionMinForce = 15 * explosionScaleFactor;
-    final Size explosionMinSize = Size(15 * explosionScaleFactor, 15 * explosionScaleFactor);
-    final Size explosionMaxSize = Size(30 * explosionScaleFactor, 30 * explosionScaleFactor);
+
+    // Confetti Parameters
+    const int tapSparkParticles = 5;
+    const Size tapSparkMinSize = Size(5, 15);
+    const Size tapSparkMaxSize = Size(10, 25);
+    const int explosionParticles = 300;
+    const double explosionMaxForce = 30;
+    const double explosionMinForce = 15;
+    const Size explosionMinSize = Size(15, 15);
+    const Size explosionMaxSize = Size(30, 30);
 
     return Stack(
       alignment: Alignment.center,
@@ -264,66 +256,42 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
         // --- Tap Spark Confetti Layers ---
         ...List.generate(_sparkControllers.length, (index) {
           final double angle = index * (2 * math.pi / _sparkControllers.length);
-          // Position relative to pinata widget size
-          final xPos = (widget.width / 2) + math.cos(angle) * (widget.width * 0.4) - (tapSparkMaxSize.width / 2);
-          final yPos = (widget.height / 2) + math.sin(angle) * (widget.height * 0.4) - (tapSparkMaxSize.height / 2);
+          final xPos = (widget.width / 2) + math.cos(angle) * (widget.width * 0.4);
+          final yPos = (widget.height / 2) + math.sin(angle) * (widget.height * 0.4);
           return Positioned(
-            left: xPos, top: yPos,
+            left: xPos - (tapSparkMaxSize.width / 2),
+            top: yPos - (tapSparkMaxSize.height / 2),
             child: ConfettiWidget(
               confettiController: _sparkControllers[index],
               blastDirection: angle + math.pi,
               blastDirectionality: BlastDirectionality.directional,
-              particleDrag: 0.05, 
-              emissionFrequency: 0.05, 
-              numberOfParticles: tapSparkParticles, // Scaled
-              gravity: 0.1, 
+              particleDrag: 0.05, emissionFrequency: 0.05,
+              numberOfParticles: tapSparkParticles,
+              gravity: 0.1,
               colors: const [Colors.yellow, Colors.amber, Colors.orange, Colors.red],
-              minimumSize: tapSparkMinSize, // Scaled
-              maximumSize: tapSparkMaxSize, // Scaled
+              minimumSize: tapSparkMinSize, maximumSize: tapSparkMaxSize,
               shouldLoop: false,
             ),
           );
         }),
 
-        // --- Main Explosion Layer (Outside AnimatedBuilder) ---
-        if (_isBroken)
-            Align(
-              alignment: Alignment.center,
-              child: ConfettiWidget(
-                confettiController: _sparkController,
-                blastDirectionality: BlastDirectionality.explosive,
-                particleDrag: 0.02, 
-                emissionFrequency: 0.03, 
-                numberOfParticles: explosionParticles, // Scaled
-                maxBlastForce: explosionMaxForce, // Scaled
-                minBlastForce: explosionMinForce, // Scaled
-                gravity: 0.2,
-                colors: const [ Colors.yellow, Colors.amber, Colors.orange, Colors.red,
-                                Colors.pink, Colors.purple, Colors.blue, Colors.green ],
-                minimumSize: explosionMinSize, // Scaled
-                maximumSize: explosionMaxSize, // Scaled
-                shouldLoop: false,
-            ),
-          ),
-
         // --- Pinata Image (Animated & Interactive) ---
         GestureDetector(
           onTap: () {
+            widget.onTap?.call();
             _handleTap();
-            widget.onTap?.call(); // Call the onTap callback if provided
           },
           child: AnimatedBuilder(
-            animation: Listenable.merge([ _wobbleController, _driftController, _flyOffController ]),
+            animation: Listenable.merge([_wobbleController, _driftController, _flyOffController]),
             builder: (context, child) {
-              final wobbleAngle = (!_isBroken && !_isFlyingOff) ? _rotationAnimation.value * math.pi : 0.0;
+              final wobbleAngle = (!_isBroken && !_isFlyingOff && _wobbleController.isAnimating) ? _rotationAnimation.value * math.pi : 0.0;
               final driftAngle = (!_isBroken && !_isFlyingOff && _driftController.isAnimating) ? _driftAnimation.value * math.pi : 0.0;
               final flyOffOffset = _isFlyingOff ? Offset(_positionAnimation.value.dx * widget.width * 0.1, _positionAnimation.value.dy * widget.height * 0.1) : Offset.zero;
               final currentScale = _isFlyingOff ? _scaleAnimation.value : _initialScale;
-
               return Transform.translate(
                 offset: flyOffOffset,
                 child: Transform.scale(
-                  scale: currentScale,
+                  scale: currentScale.clamp(0.0, _initialScale * 1.1),
                   child: Transform.rotate( angle: wobbleAngle + driftAngle, child: child ),
                 ),
               );
@@ -335,21 +303,35 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
                 fit: BoxFit.contain,
                 gaplessPlayback: true,
                 errorBuilder: (context, error, stackTrace) {
-                  print('Error loading image: $imagePath -> $error');
+                  print('Error loading pinata image: $imagePath -> $error');
                   return Container(
                     width: widget.width, height: widget.height,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.red.withAlpha((0.3 * 255).toInt()),
-                    ),
-                    child: const Center(child: Icon(Icons.error, color: Colors.white)),
+                    decoration: BoxDecoration( shape: BoxShape.circle, color: Colors.red.withOpacity(0.3), ),
+                    child: const Center(child: Icon(Icons.error_outline, color: Colors.white, size: 40)),
                   );
                 },
               ),
             ),
           ),
         ),
+
+        // --- Main Explosion Layer ---
+         if (_explosionTriggered)
+            Align(
+              alignment: Alignment.center,
+              child: ConfettiWidget(
+                confettiController: _sparkController,
+                blastDirectionality: BlastDirectionality.explosive,
+                particleDrag: 0.02, emissionFrequency: 0.03,
+                numberOfParticles: explosionParticles,
+                maxBlastForce: explosionMaxForce, minBlastForce: explosionMinForce,
+                gravity: 0.2,
+                colors: const [ Colors.yellow, Colors.amber, Colors.orange, Colors.red, Colors.pink, Colors.purple, Colors.blue, Colors.green ],
+                minimumSize: explosionMinSize, maximumSize: explosionMaxSize,
+                shouldLoop: false,
+            ),
+          ),
       ],
     );
-  }
-}
+  } // End of build
+} // End of _PinataWidgetState

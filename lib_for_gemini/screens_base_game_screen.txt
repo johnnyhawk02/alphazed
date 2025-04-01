@@ -114,7 +114,7 @@ abstract class BaseGameScreenState<T extends BaseGameScreen> extends State<T>
                 if (themeProvider.flashColor != null && themeProvider.flashOpacity > 0)
                   Positioned.fill(
                     child: Container(
-                      color: themeProvider.flashColor!.withOpacity(themeProvider.flashOpacity),
+                      color: themeProvider.flashColor!.withAlpha((themeProvider.flashOpacity * 255).toInt()),
                     ),
                   ),
               ],

@@ -247,7 +247,7 @@ class AudioService {
 
   /// Plays the pinata tap sound.
   Future<void> playPinataTap() async {
-    await playShortSoundEffect('$_audioBasePath/other/bell.mp3', stopPreviousEffect: true);
+    await playShortSoundEffect('$_audioBasePath/other/knock.mp3', stopPreviousEffect: true);
   }
 
    /// Plays the pinata break sound.
