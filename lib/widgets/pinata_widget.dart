@@ -48,6 +48,7 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
   int _tapCount = 0;
   bool _isFlyingOff = false;
   bool _isCompletelyGone = false;
+  bool _confettiFinished = false;  // Track if confetti animation has finished
 
   // Configuration
   Offset _flyOffDirection = Offset.zero;
@@ -86,14 +87,33 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
      _flyOffController.addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           if (mounted) {
-            setState(() { _isCompletelyGone = true; });
-            widget.onCompletelyGone?.call();
+            // Instead of immediately marking as completely gone, 
+            // we'll only do so if the confetti has finished too
+            if (_confettiFinished) {
+              setState(() { _isCompletelyGone = true; });
+              widget.onCompletelyGone?.call();
+            } else {
+              // If confetti is still playing, we'll wait for it
+              // When confetti finishes, our confetti listener will
+              // check if fly-off is done and then call onCompletelyGone
+            }
           }
         }
      });
 
     // --- Confetti Setup ---
     _sparkController = ConfettiController(duration: const Duration(milliseconds: 2500));
+    _sparkController.addListener(() {
+      // Check if the controller is stopped and confetti animation is complete
+      if (_sparkController.state == ConfettiControllerState.stopped && _isBroken && !_confettiFinished) {
+        setState(() {
+          _confettiFinished = true;
+        });
+        // Check if both animations are done
+        _checkAnimationsComplete();
+      }
+    });
+    
     for (int i = 0; i < 5; i++) {
       _sparkControllers.add(ConfettiController(duration: const Duration(milliseconds: 300)));
     }
@@ -184,7 +204,9 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
       _driftController.stop();
 
       // Play explosion confetti and break sound (uses effect player, won't stop tap sound)
-      _sparkController.play();
+      if (_sparkController.state == ConfettiControllerState.stopped) {
+        _sparkController.play();
+      }
       _playBreakSound(); // Play IMMEDIATELY after tap sound - separate players handle it
 
       // Start Fly-Off sequence after a visual delay
@@ -198,6 +220,16 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
     }
   }
 
+  // Check if both animations are complete and trigger callback if needed
+  void _checkAnimationsComplete() {
+    if (mounted && _confettiFinished && _flyOffController.status == AnimationStatus.completed && !_isCompletelyGone) {
+      setState(() { 
+        _isCompletelyGone = true; 
+      });
+      widget.onCompletelyGone?.call();
+    }
+  }
+
   // --- Build Method ---
 
   @override
@@ -207,6 +239,24 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
     }
 
     final imagePath = _isBroken ? widget.brokenImagePath : widget.intactImagePath;
+    
+    // Get screen width for scaling
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // --- Scaled Confetti Parameters ---
+    // Tap Sparks Scaling
+    final double tapSparkScaleFactor = (screenWidth / 400).clamp(0.5, 1.5); // Base width 400px
+    final int tapSparkParticles = (5 * tapSparkScaleFactor).toInt();
+    final Size tapSparkMinSize = Size(5 * tapSparkScaleFactor, 15 * tapSparkScaleFactor);
+    final Size tapSparkMaxSize = Size(10 * tapSparkScaleFactor, 25 * tapSparkScaleFactor);
+    
+    // Main Explosion Scaling
+    final double explosionScaleFactor = (screenWidth / 400).clamp(0.7, 2.0);
+    final int explosionParticles = (300 * explosionScaleFactor).toInt();
+    final double explosionMaxForce = 30 * explosionScaleFactor;
+    final double explosionMinForce = 15 * explosionScaleFactor;
+    final Size explosionMinSize = Size(15 * explosionScaleFactor, 15 * explosionScaleFactor);
+    final Size explosionMaxSize = Size(30 * explosionScaleFactor, 30 * explosionScaleFactor);
 
     return Stack(
       alignment: Alignment.center,
@@ -214,17 +264,22 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
         // --- Tap Spark Confetti Layers ---
         ...List.generate(_sparkControllers.length, (index) {
           final double angle = index * (2 * math.pi / _sparkControllers.length);
-          final xPos = (widget.width / 2) + math.cos(angle) * (widget.width * 0.4) - 5;
-          final yPos = (widget.height / 2) + math.sin(angle) * (widget.height * 0.4) - 5;
+          // Position relative to pinata widget size
+          final xPos = (widget.width / 2) + math.cos(angle) * (widget.width * 0.4) - (tapSparkMaxSize.width / 2);
+          final yPos = (widget.height / 2) + math.sin(angle) * (widget.height * 0.4) - (tapSparkMaxSize.height / 2);
           return Positioned(
             left: xPos, top: yPos,
             child: ConfettiWidget(
               confettiController: _sparkControllers[index],
               blastDirection: angle + math.pi,
               blastDirectionality: BlastDirectionality.directional,
-              particleDrag: 0.05, emissionFrequency: 0.05, numberOfParticles: 5,
-              gravity: 0.1, colors: const [Colors.yellow, Colors.amber, Colors.orange, Colors.red],
-              minimumSize: const Size(5, 15), maximumSize: const Size(10, 25),
+              particleDrag: 0.05, 
+              emissionFrequency: 0.05, 
+              numberOfParticles: tapSparkParticles, // Scaled
+              gravity: 0.1, 
+              colors: const [Colors.yellow, Colors.amber, Colors.orange, Colors.red],
+              minimumSize: tapSparkMinSize, // Scaled
+              maximumSize: tapSparkMaxSize, // Scaled
               shouldLoop: false,
             ),
           );
@@ -237,11 +292,16 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
               child: ConfettiWidget(
                 confettiController: _sparkController,
                 blastDirectionality: BlastDirectionality.explosive,
-                particleDrag: 0.02, emissionFrequency: 0.03, numberOfParticles: 300,
-                maxBlastForce: 30, minBlastForce: 15, gravity: 0.2,
+                particleDrag: 0.02, 
+                emissionFrequency: 0.03, 
+                numberOfParticles: explosionParticles, // Scaled
+                maxBlastForce: explosionMaxForce, // Scaled
+                minBlastForce: explosionMinForce, // Scaled
+                gravity: 0.2,
                 colors: const [ Colors.yellow, Colors.amber, Colors.orange, Colors.red,
                                 Colors.pink, Colors.purple, Colors.blue, Colors.green ],
-                minimumSize: const Size(15, 15), maximumSize: const Size(30, 30),
+                minimumSize: explosionMinSize, // Scaled
+                maximumSize: explosionMaxSize, // Scaled
                 shouldLoop: false,
             ),
           ),
@@ -278,7 +338,10 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
                   print('Error loading image: $imagePath -> $error');
                   return Container(
                     width: widget.width, height: widget.height,
-                    color: Colors.red.withOpacity(0.3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red.withAlpha((0.3 * 255).toInt()),
+                    ),
                     child: const Center(child: Icon(Icons.error, color: Colors.white)),
                   );
                 },

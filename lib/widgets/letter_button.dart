@@ -11,6 +11,7 @@ class LetterButton extends StatefulWidget {
   final bool draggable; // Whether the button can be dragged
   final bool isCorrectLetter; // Whether this letter matches the current target
   final ValueChanged<bool>? onDragSuccess; // Callback after drag ends, indicates correctness
+  final bool isDragging; // Add this property to track dragging state
 
   const LetterButton({
     super.key,
@@ -20,6 +21,7 @@ class LetterButton extends StatefulWidget {
     this.colored = false,
     this.draggable = false,
     this.onDragSuccess,
+    this.isDragging = false, // Initialize with default value
   });
 
   @override
@@ -245,10 +247,10 @@ class _LetterButtonState extends State<LetterButton> {
         // Force circular shape with ShapeBorder
         shape: CircleBorder(
           side: BorderSide(
-            color: isButtonActive 
-                ? Colors.white.withOpacity(0.8) 
-                : Colors.grey.withOpacity(0.4),
-            width: 2.0,
+            color: widget.isDragging 
+                ? Colors.white.withAlpha((0.8 * 255).toInt()) 
+                : Colors.grey.withAlpha((0.4 * 255).toInt()),
+            width: 1.0,
           ),
         ),
         // Apply the gradient as elevation overlay color
@@ -297,7 +299,7 @@ class _EmptyLetterCircle extends StatelessWidget {
         // Force circular shape with ShapeBorder
         shape: CircleBorder(
           side: BorderSide(
-            color: Colors.grey.withOpacity(0.4),
+            color: Colors.grey.withAlpha((0.4 * 255).toInt()),
             width: 2.0,
           ),
         ),

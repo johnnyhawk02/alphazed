@@ -6,6 +6,7 @@ import '../models/game_state.dart'; // Uses the GameState WITHOUT GamePhase
 import '../services/audio_service.dart';
 import '../widgets/image_drop_target.dart';
 import '../widgets/letter_button.dart';
+import '../widgets/color_picker_dialog.dart';
 import 'pinata_screen.dart';
 import 'fireworks_screen.dart';
 import 'ripple_screen.dart'; // Assuming ripple_screen.dart exists
@@ -29,22 +30,79 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
   void initState() {
     super.initState();
   }
+  
+  // Override buildGameAppBar to show current word instead of static title
+  @override
+  PreferredSizeWidget buildGameAppBar() {
+    // Get the current word from gameState using Provider.of instead of Consumer
+    final GameState gameState = Provider.of<GameState>(context, listen: true);
+    final String displayTitle = gameState.currentItem?.word.toLowerCase() ?? "picture matching";
+    
+    return AppBar(
+      elevation: 1,
+      backgroundColor: Colors.transparent,
+      centerTitle: true,
+      toolbarHeight: 70,
+      automaticallyImplyLeading: false, // Disable back button
+      title: Text(
+        displayTitle,
+        style: GameConfig.titleTextStyle,
+      ),
+      actions: [
+        // Add the color options menu
+        IconButton(
+          icon: const Icon(Icons.color_lens),
+          onPressed: () {
+            _showColorPickerDialog();
+          },
+        ),
+      ],
+    );
+  }
+  
+  // Add the missing _showColorPickerDialog method
+  void _showColorPickerDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const ColorPickerDialog(),
+    );
+  }
 
   // --- Build Portrait Layout ---
   @override
   Widget buildPortraitLayout(GameState gameState, AudioService audioService) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    
+    // Check if device is likely an iPad (using aspect ratio and screen size)
+    bool isIpad = mediaQuery.size.shortestSide >= 600 &&
+                (screenWidth / screenHeight).abs() < 1.6;
+    
+    // Use device-specific flex values from GameConfig
+    final int imageAreaFlexValue = isIpad 
+        ? GameConfig.ipadImageAreaFlex 
+        : GameConfig.iphoneImageAreaFlex;
+        
+    final int buttonAreaFlexValue = isIpad 
+        ? GameConfig.ipadLetterButtonsFlex 
+        : GameConfig.iphoneLetterButtonsFlex;
+    
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
         // --- Image Area ---
-        Container(
-          key: targetContainerKey,
-          child: buildImageDropTarget(gameState, audioService),
+        Expanded(
+          flex: imageAreaFlexValue,
+          child: Container(
+            key: targetContainerKey,
+            child: buildImageDropTarget(gameState, audioService),
+          ),
         ),
         if (!fullScreenMode) SizedBox(height: GameConfig.defaultPadding * 1.5),
         // --- Letter Buttons Area ---
         Expanded(
-          flex: GameConfig.letterButtonsFlex,
+          flex: buttonAreaFlexValue,
           child: buildLetterGrid(gameState, audioService),
         ),
         if (!fullScreenMode) SizedBox(height: GameConfig.defaultPadding),
@@ -55,17 +113,12 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
 
   // --- Build Image Drop Target ---
   Widget buildImageDropTarget(GameState gameState, AudioService audioService) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final imageSize = screenWidth;
-
     // --- Placeholder Logic ---
-    // REVERTED: Use isImageVisible and gameStarted flags instead of gamePhase
     if (!gameState.isImageVisible || !gameState.gameStarted || gameState.currentItem == null) {
       print("INFO: Image not visible, game not started, or currentItem is null. Showing placeholder.");
       return Container(
-        width: imageSize,
-        height: imageSize,
-        decoration: const BoxDecoration( color: Colors.transparent, ),
+        decoration: const BoxDecoration(color: Colors.transparent),
+        child: const Center(child: SizedBox.shrink()),
       );
     }
 
@@ -88,20 +141,21 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
     // --- Display Actual Image ---
     return Hero(
       tag: 'game_image_${currentItem.imagePath}',
-      child: SizedBox(
-        width: imageSize,
-        height: imageSize,
-        child: ImageDropTarget(
-          key: ValueKey(currentItem.imagePath),
-          item: currentItem,
-          onLetterAccepted: (letter) async {
-            if (letter.toLowerCase() != currentItem.firstLetter.toLowerCase()) {
-              print("❌ Incorrect letter '$letter' dropped (Audio Trigger)");
-              audioService.playIncorrect();
-            } else {
-              print("✅ Correct letter '$letter' dropped (Audio handled by button)");
-            }
-          },
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 1.0, // Keep image as a square
+          child: ImageDropTarget(
+            key: ValueKey(currentItem.imagePath),
+            item: currentItem,
+            onLetterAccepted: (letter) async {
+              if (letter.toLowerCase() != currentItem.firstLetter.toLowerCase()) {
+                print("❌ Incorrect letter '$letter' dropped (Audio Trigger)");
+                audioService.playIncorrect();
+              } else {
+                print("✅ Correct letter '$letter' dropped (Audio handled by button)");
+              }
+            },
+          ),
         ),
       ),
     );

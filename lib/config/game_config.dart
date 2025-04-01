@@ -23,8 +23,14 @@ class GameConfig {
   static final Color systemNavigationBarColor = defaultBackgroundColor; // Use the same pink for system navigation bar
 
   // --- Layout Flex Values ---
-  static const int imageAreaFlex = 3; // Flex value for the image area in layout
-  static const int letterButtonsFlex = 2; // Flex value for the letter buttons area in layout
+  //static const int imageAreaFlex = 3; // Default flex value for the image area in layout (legacy)
+  //static const int letterButtonsFlex = 2; // Default flex value for the letter buttons area in layout (legacy)
+  
+  // Device-specific flex values
+  static const int ipadImageAreaFlex = 7; // Flex value for image area on iPad
+  static const int ipadLetterButtonsFlex = 3; // Flex value for letter buttons area on iPad
+  static const int iphoneImageAreaFlex = 3; // Flex value for image area on iPhone
+  static const int iphoneLetterButtonsFlex = 2; // Flex value for letter buttons area on iPhone
 
   // --- Gradient ---
   static final LinearGradient backgroundGradient = LinearGradient(
@@ -32,7 +38,7 @@ class GameConfig {
     end: Alignment.bottomRight,
     colors: [
       defaultBackgroundColor,
-      defaultBackgroundColor.withOpacity(0.9),
+      defaultBackgroundColor.withAlpha((0.9 * 255).toInt()),
     ],
   );
   static TextStyle get bodyTextStyle => GoogleFonts.fredoka(
@@ -55,6 +61,7 @@ class GameConfig {
   static const double imageHeight = 300.0; // Used?
   static const double imageDropWordFontSize = 150.0; // Font size for word shown on tap
   static const double imageDropTargetPadding = 0.0; // Internal padding (NEW)
+  static const double ipadImageWidthFactor = 0.7; // Image width factor for iPad (70% of screen width)
   // (Red Flash animation handled internally in ImageDropTarget state)
   // (Scale animation handled internally in ImageDropTarget state)
 

@@ -57,95 +57,108 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double availableWidth = constraints.maxWidth;
+        final mediaQuery = MediaQuery.of(context);
+        final screenWidth = mediaQuery.size.width;
+        
+        // Check if device is likely an iPad (using aspect ratio and screen size)
+        bool isIpad = mediaQuery.size.shortestSide >= 600 &&
+                    (screenWidth / mediaQuery.size.height).abs() < 1.6;
+        
+        // Calculate width - use 70% of screen width for iPad, otherwise use available width
+        final double targetWidth = isIpad 
+            ? screenWidth * GameConfig.ipadImageWidthFactor 
+            : constraints.maxWidth;
+            
         // For 1:1 ratio, height should equal width
-        final double containerHeight = availableWidth;
+        final double containerHeight = targetWidth;
         
         // Main stack: DragTarget first, Confetti on top
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // DragTarget containing the image/letter/word display
-            DragTarget<String>(
-              onWillAcceptWithDetails: (data) {
-                setState(() => isHovering = true);
-                return true;
-              },
-              onLeave: (_) {
-                setState(() => isHovering = false);
-              },
-              onAcceptWithDetails: (data) {
-                setState(() => isHovering = false);
-                
-                // Check if the dropped letter is correct
-                final isCorrect = data.data.toLowerCase() == widget.item.firstLetter.toLowerCase();
-                
-                // Flash red for incorrect, green for correct
-                if (isCorrect) {
-                  context.read<ThemeProvider>().flashCorrect();
-                } else {
-                  context.read<ThemeProvider>().flashIncorrect();
-                }
-                
-                // We don't set correctLetter anymore, even for correct answers
-                widget.onLetterAccepted(data.data);
-              },
-              builder: (context, candidateData, rejectedData) {
-                return Container(
-                  width: availableWidth,
-                  height: containerHeight,
-                  // Remove padding to allow image to take up full container
-                  decoration: BoxDecoration(
-                    // Remove border radius for edge-to-edge display
-                  ),
-                  // Modified: Keep ClipRRect only for overlays but not for the main container
-                  child: Stack(
-                    children: [
-                      // Image - No ClipRRect to allow edge-to-edge display
-                      Positioned.fill(
-                        child: Opacity(
-                          opacity: isHovering ? 0.7 : 1.0,
-                          child: Image.asset(
-                            widget.item.imagePath,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              print("Error loading image: ${widget.item.imagePath}\nError: $error");
-                              // Provide a fallback display when image can't be loaded
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.image_not_supported,
-                                          size: 60, color: Colors.grey.shade700),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        widget.item.word,
-                                        style: GameConfig.wordTextStyle.copyWith(
-                                          fontSize: 36,
-                                          color: Colors.black87,
+        return Center(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // DragTarget containing the image/letter/word display
+              DragTarget<String>(
+                onWillAcceptWithDetails: (data) {
+                  setState(() => isHovering = true);
+                  return true;
+                },
+                onLeave: (_) {
+                  setState(() => isHovering = false);
+                },
+                onAcceptWithDetails: (data) {
+                  setState(() => isHovering = false);
+                  
+                  // Check if the dropped letter is correct
+                  final isCorrect = data.data.toLowerCase() == widget.item.firstLetter.toLowerCase();
+                  
+                  // Flash red for incorrect, green for correct
+                  if (isCorrect) {
+                    context.read<ThemeProvider>().flashCorrect();
+                  } else {
+                    context.read<ThemeProvider>().flashIncorrect();
+                  }
+                  
+                  // We don't set correctLetter anymore, even for correct answers
+                  widget.onLetterAccepted(data.data);
+                },
+                builder: (context, candidateData, rejectedData) {
+                  return Container(
+                    width: targetWidth,
+                    height: containerHeight,
+                    // Remove padding to allow image to take up full container
+                    decoration: BoxDecoration(
+                      // Remove border radius for edge-to-edge display
+                    ),
+                    // Modified: Keep ClipRRect only for overlays but not for the main container
+                    child: Stack(
+                      children: [
+                        // Image - No ClipRRect to allow edge-to-edge display
+                        Positioned.fill(
+                          child: Opacity(
+                            opacity: isHovering ? 0.7 : 1.0,
+                            child: Image.asset(
+                              widget.item.imagePath,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                print("Error loading image: ${widget.item.imagePath}\nError: $error");
+                                // Provide a fallback display when image can't be loaded
+                                return Container(
+                                  color: Colors.grey.shade200,
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.image_not_supported,
+                                            size: 60, color: Colors.grey.shade700),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          widget.item.word,
+                                          style: GameConfig.wordTextStyle.copyWith(
+                                            fontSize: 36,
+                                            color: Colors.black87,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                      
-                      // Hover indicator
-                      if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
+                        
+                        // Hover indicator
+                        if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         );
       },
     );

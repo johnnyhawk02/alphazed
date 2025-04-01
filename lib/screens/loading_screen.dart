@@ -173,7 +173,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  GameConfig.defaultBackgroundColor.withOpacity(0.95),
+                  GameConfig.defaultBackgroundColor.withAlpha((0.95 * 255).toInt()),
                   GameConfig.defaultBackgroundColor,
                 ],
               ),
@@ -246,7 +246,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                                       end: Alignment.bottomRight,
                                       colors: [
                                         GameConfig.primaryButtonColor,
-                                        GameConfig.primaryButtonColor.withOpacity(0.8),
+                                        GameConfig.primaryButtonColor.withAlpha((0.8 * 255).toInt()),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(screenSize.width * 0.02),
@@ -324,7 +324,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                                       Text(
                                         'Loading ${(_loadingProgress * 100).toInt()}%',
                                         style: GameConfig.bodyTextStyle.copyWith(
-                                          color: GameConfig.textColor.withOpacity(0.7),
+                                          color: GameConfig.textColor.withAlpha((0.7 * 255).toInt()),
                                         ),
                                       ),
                                     ],
@@ -337,7 +337,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                       child: Text(
                         _showWelcomeMessage ? '' : 'Learn the alphabet through fun!',
                         style: GameConfig.bodyTextStyle.copyWith(
-                          color: GameConfig.textColor.withOpacity(0.7),
+                          color: GameConfig.textColor.withAlpha((0.7 * 255).toInt()),
                           fontSize: 16,
                         ),
                         textAlign: TextAlign.center,

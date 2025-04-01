@@ -59,12 +59,12 @@ class _IconGeneratorScreenState extends State<IconGeneratorScreen> {
                                 height: 150,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
                                     colors: [
                                       GameConfig.primaryButtonColor,
-                                      GameConfig.primaryButtonColor.withOpacity(0.8),
+                                      GameConfig.primaryButtonColor.withAlpha((0.8 * 255).toInt()),
                                     ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
                                   shape: BoxShape.circle,
                                 ),
@@ -133,7 +133,7 @@ class _IconGeneratorScreenState extends State<IconGeneratorScreen> {
                                             end: Alignment.bottomRight,
                                             colors: [
                                               GameConfig.primaryButtonColor,
-                                              GameConfig.primaryButtonColor.withOpacity(0.8),
+                                              GameConfig.primaryButtonColor.withAlpha((0.8 * 255).toInt()),
                                             ],
                                           ),
                                           borderRadius: BorderRadius.circular(8),

@@ -151,13 +151,30 @@ class _RippleScreenState extends State<RippleScreen> with TickerProviderStateMix
             // --- NEXT WORD Button --- (Logic remains the same)
             if (_showNextButton)
               Positioned.fill( child: Center( child: GestureDetector( onTap: () { _completionTimer?.cancel(); widget.onComplete(); },
-                  child: Container( padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20), decoration: BoxDecoration( color: Colors.deepPurpleAccent.shade400, borderRadius: BorderRadius.circular(30), boxShadow: [ BoxShadow( color: Colors.black.withOpacity(0.5), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, 5), ), ], border: Border.all(color: Colors.white.withOpacity(0.7), width: 2) ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurpleAccent.shade400,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha((0.5 * 255).toInt()),
+                          spreadRadius: 2,
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.white.withAlpha((0.7 * 255).toInt()),
+                        width: 2
+                      )
+                    ),
                     child: const Text( 'NEXT WORD', style: TextStyle( fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5, shadows: [ Shadow( offset: Offset(1.0, 1.0), blurRadius: 2.0, color: Colors.black45, ), ] ), ),
                   ), ), ),
               ),
 
             // Back button (Keep for usability)
-            Positioned( top: 40, left: 20, child: Container( decoration: BoxDecoration( color: Colors.black.withOpacity(0.4), shape: BoxShape.circle, ),
+            Positioned( top: 40, left: 20, child: Container( decoration: BoxDecoration( color: Colors.black.withAlpha((0.4 * 255).toInt()), shape: BoxShape.circle, ),
                 child: IconButton( icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () { _completionTimer?.cancel(); widget.onComplete(); }, ),
               ),
             ),
@@ -196,7 +213,7 @@ class _SimplifiedRipplePainter extends CustomPainter {
 
         if (opacity <= 0.0 || currentRadius <= 0.0) continue;
 
-        final Color currentColor = ripple.color.withOpacity(opacity);
+        final Color currentColor = ripple.color.withAlpha((opacity * 255).toInt());
 
         // Configure paint with gradient ONLY
         _paint.shader = ui.Gradient.radial(
@@ -204,7 +221,7 @@ class _SimplifiedRipplePainter extends CustomPainter {
           currentRadius,
           [
             currentColor, // Center color with opacity
-            currentColor.withOpacity(0.0), // Fade to transparent
+            currentColor.withAlpha(0), // Fade to transparent
           ],
           [ 0.0, 1.0 ] // Gradient stops (Center to Edge)
         );

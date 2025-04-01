@@ -19,6 +19,8 @@ class PinataScreen extends StatefulWidget {
 class _PinataScreenState extends State<PinataScreen> {
   // State to track when the pinata has finished its fly-off animation
   bool _pinataCompletelyGone = false;
+  // State to track when to show the next button (after delay)
+  bool _showNextButton = false;
   // Track the current tap count for the countdown display
   int _tapCount = 0;
   final int _requiredTaps = 6;
@@ -35,12 +37,30 @@ class _PinataScreenState extends State<PinataScreen> {
     // Reset tap count when screen initializes
     _tapCount = 0;
   }
+  
+  // Add delay and show button
+  void _handlePinataAnimationComplete() {
+    if (mounted) {
+      setState(() {
+        _pinataCompletelyGone = true;
+      });
+      
+      // Increase delay to ensure confetti animation has fully completed visually
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted) {
+          setState(() {
+            _showNextButton = true;
+          });
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     // Calculate pinata dimensions based on screen width
     final screenWidth = MediaQuery.of(context).size.width;
-    final pinataWidth = screenWidth * 0.4; // 40% of screen width
+    final pinataWidth = screenWidth * 0.7; // Changed from 0.4 to 0.7
     final pinataHeight = pinataWidth; // Keep it square for proper aspect ratio
 
     return Scaffold(
@@ -56,13 +76,20 @@ class _PinataScreenState extends State<PinataScreen> {
         ),
         child: Stack(
           children: [
+            // Background dimmer overlay
+            Container(
+              color: Colors.black.withAlpha((0.4 * 255).toInt()),
+              width: double.infinity,
+              height: double.infinity,
+            ),
+
             // Back button
             Positioned(
               top: 40,
               left: 20,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withAlpha((0.4 * 255).toInt()),
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
@@ -103,62 +130,10 @@ class _PinataScreenState extends State<PinataScreen> {
                               // print("Pinata breaking sequence started!");
                             },
                             // onCompletelyGone is called when the fly-off animation finishes
-                            onCompletelyGone: () {
-                              // Ensure the widget is still mounted before updating state
-                              if (mounted) {
-                                setState(() {
-                                  _pinataCompletelyGone = true;
-                                });
-                              }
-                            },
+                            onCompletelyGone: _handlePinataAnimationComplete,
                             audioService: widget.audioService,
                             requiredTaps: _requiredTaps, // Changed from 3 to 6 hits to explode
                             onTap: _incrementTapCount, // Increment tap count on tap
-                          ),
-                        ),
-
-                      // NEXT WORD button
-                      if (_pinataCompletelyGone)
-                        Positioned.fill(
-                          child: Center(
-                            child: GestureDetector(
-                              onTap: () {
-                                // Call onComplete callback directly
-                                widget.onComplete();
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade600, // Slightly adjusted color
-                                  borderRadius: BorderRadius.circular(30), // More rounded
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.4),
-                                      spreadRadius: 1,
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4), // Slightly more shadow
-                                    ),
-                                  ],
-                                  border: Border.all(color: Colors.white.withOpacity(0.8), width: 2) // Optional border
-                                ),
-                                child: const Text(
-                                  'NEXT WORD', // Using uppercase for button convention
-                                  style: TextStyle(
-                                    fontSize: 36, // Slightly smaller font size
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 1.5, // Adjusted letter spacing
-                                    shadows: [ // Add text shadow for depth
-                                      Shadow(
-                                        offset: Offset(1.0, 1.0),
-                                        blurRadius: 2.0,
-                                        color: Colors.black38,
-                                      ),
-                                    ]
-                                  ),
-                                ),
-                              ),
-                            ),
                           ),
                         ),
                     ],
@@ -176,7 +151,7 @@ class _PinataScreenState extends State<PinataScreen> {
                   width: screenWidth * 0.2, // 20% of screen width
                   height: screenWidth * 0.2, // Square aspect ratio
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
+                    color: Colors.black.withAlpha((0.7 * 255).toInt()),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: Colors.white,
@@ -184,40 +159,72 @@ class _PinataScreenState extends State<PinataScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withAlpha((0.5 * 255).toInt()),
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),
                     ],
                   ),
                   child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${_requiredTaps - _tapCount}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: screenWidth * 0.09, // 45% of container width
-                            fontWeight: FontWeight.bold,
-                            shadows: const [
-                              Shadow(
-                                blurRadius: 5,
-                                color: Colors.black,
-                                offset: Offset(2, 2),
-                              ),
-                            ],
+                    child: Text(
+                      '${_requiredTaps - _tapCount}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: screenWidth * 0.12, // Increased size now that we only have the number
+                        fontWeight: FontWeight.bold,
+                        shadows: const [
+                          Shadow(
+                            blurRadius: 5,
+                            color: Colors.black,
+                            offset: Offset(2, 2),
                           ),
-                        ),
-                        Text(
-                          'hits left',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: screenWidth * 0.025, // Smaller text for label
-                            fontWeight: FontWeight.bold,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // NEXT WORD button
+            if (_showNextButton)
+              Positioned.fill(
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Call onComplete callback directly
+                      widget.onComplete();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade600, // Slightly adjusted color
+                        borderRadius: BorderRadius.circular(30), // More rounded
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha((0.4 * 255).toInt()),
+                            spreadRadius: 1,
+                            blurRadius: 8,
+                            offset: const Offset(0, 4), // Slightly more shadow
                           ),
+                        ],
+                        border: Border.all(color: Colors.white.withAlpha((0.8 * 255).toInt()), width: 2) // Optional border
+                      ),
+                      child: const Text(
+                        'NEXT WORD', // Using uppercase for button convention
+                        style: TextStyle(
+                          fontSize: 36, // Slightly smaller font size
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.5, // Adjusted letter spacing
+                          shadows: [ // Add text shadow for depth
+                            Shadow(
+                              offset: Offset(1.0, 1.0),
+                              blurRadius: 2.0,
+                              color: Colors.black38,
+                            ),
+                          ]
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
