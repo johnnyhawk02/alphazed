@@ -13,7 +13,7 @@ class GameConfig {
   static BorderRadius loadingIndicatorBorderRadius = BorderRadius.circular(10);
 
   // --- App Colors ---
-  static final Color defaultBackgroundColor = Color.fromARGB(255, 255, 247, 17); // Soft warm pink
+  static final Color defaultBackgroundColor = Color(0xFFBCB8B8); // Updated to #BCB8B8 (light gray)
   static final Color defaultBorderColor = Color(0xFFDEE2E6); // Light gray
   static final Color textColor = Color(0xFF2B2D42); // Dark blue-gray
   static final Color cardBackgroundColor = defaultBackgroundColor; // Use the same pink for cards
@@ -198,4 +198,5 @@ class GameConfig {
   static const bool enableDeveloperOptions = true;
   static const String developerOptionsTitle = 'Developer Options';
   static const IconData developerOptionsIcon = Icons.developer_mode;
+  static const bool showCelebrationScreens = true;
 }

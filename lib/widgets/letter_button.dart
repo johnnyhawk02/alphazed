@@ -71,6 +71,28 @@ class _LetterButtonState extends State<LetterButton> {
     });
   }
 
+  @override
+  void didUpdateWidget(covariant LetterButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Simpler, more aggressive reset:
+    // If the button is now draggable (meaning it should be active for the current round)
+    // AND its internal state still thinks it was dragged from a previous interaction,
+    // force the state back to false.
+    if (widget.draggable && _wasSuccessfullyDragged) {
+      print("Resetting _wasSuccessfullyDragged for button '${widget.letter}' in didUpdateWidget because widget.draggable is now true.");
+      // Reset the flag directly. A build is already happening due to the widget update.
+      _wasSuccessfullyDragged = false;
+    }
+
+    // Reset feedback if the letter changes while feedback is showing
+    if (widget.letter != oldWidget.letter && _showIncorrectFeedback) {
+      _feedbackTimer?.cancel();
+      // Reset feedback flag directly as well
+      _showIncorrectFeedback = false;
+    }
+  }
+
   // --- Build Method ---
   // This method describes the part of the user interface represented by this widget.
   @override
