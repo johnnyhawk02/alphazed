@@ -12,6 +12,7 @@ class PinataWidget extends StatefulWidget {
   final Function()? onCompletelyGone; // Callback for when fly-off is complete
   final int requiredTaps;
   final AudioService audioService;
+  final Function()? onTap; // Added callback for parent to track taps
 
   const PinataWidget({
     Key? key,
@@ -22,6 +23,7 @@ class PinataWidget extends StatefulWidget {
     required this.onBroken,
     required this.audioService,
     this.onCompletelyGone,
+    this.onTap,
     this.requiredTaps = 3,
   }) : super(key: key);
 
@@ -246,7 +248,10 @@ class _PinataWidgetState extends State<PinataWidget> with TickerProviderStateMix
 
         // --- Pinata Image (Animated & Interactive) ---
         GestureDetector(
-          onTap: _handleTap,
+          onTap: () {
+            _handleTap();
+            widget.onTap?.call(); // Call the onTap callback if provided
+          },
           child: AnimatedBuilder(
             animation: Listenable.merge([ _wobbleController, _driftController, _flyOffController ]),
             builder: (context, child) {

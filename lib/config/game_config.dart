@@ -97,7 +97,19 @@ class GameConfig {
   );
   // Decoration used by LetterButton widget
   static BoxDecoration getLetterButtonDecoration(BuildContext context, {bool isActive = true}) {
-    final buttonSize = MediaQuery.of(context).size.width * letterButtonSizeFactor;
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    
+    // Check if device is likely an iPad (using aspect ratio and size)
+    bool isIpad = mediaQuery.size.shortestSide >= 600 &&
+                  (screenWidth / screenHeight).abs() < 1.6;
+    
+    // Adjust size factor for iPad - make it 20% smaller
+    final sizeFactor = isIpad ? letterButtonSizeFactor * 0.8 : letterButtonSizeFactor;
+    
+    final buttonSize = screenWidth * sizeFactor;
+    
     return BoxDecoration(
       gradient: isActive ? letterButtonGradient : inactiveButtonGradient,
       // Make border radius dependent on button size

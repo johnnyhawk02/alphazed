@@ -19,19 +19,29 @@ class PinataScreen extends StatefulWidget {
 class _PinataScreenState extends State<PinataScreen> {
   // State to track when the pinata has finished its fly-off animation
   bool _pinataCompletelyGone = false;
-  // final _random = Random(); // Keep if you plan other random elements
+  // Track the current tap count for the countdown display
+  int _tapCount = 0;
+  final int _requiredTaps = 6;
+  
+  void _incrementTapCount() {
+    setState(() {
+      _tapCount++;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    // Any initial setup if needed
+    // Reset tap count when screen initializes
+    _tapCount = 0;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Define pinata dimensions for consistency
-    const double pinataWidth = 300.0;
-    const double pinataHeight = 300.0;
+    // Calculate pinata dimensions based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final pinataWidth = screenWidth * 0.4; // 40% of screen width
+    final pinataHeight = pinataWidth; // Keep it square for proper aspect ratio
 
     return Scaffold(
       body: Container(
@@ -102,7 +112,8 @@ class _PinataScreenState extends State<PinataScreen> {
                               }
                             },
                             audioService: widget.audioService,
-                            requiredTaps: 3, // Or configure as needed
+                            requiredTaps: _requiredTaps, // Changed from 3 to 6 hits to explode
+                            onTap: _incrementTapCount, // Increment tap count on tap
                           ),
                         ),
 
@@ -155,6 +166,62 @@ class _PinataScreenState extends State<PinataScreen> {
                 },
               ),
             ),
+
+            // Countdown display in top right corner
+            if (!_pinataCompletelyGone)
+              Positioned(
+                top: 40,
+                right: 20,
+                child: Container(
+                  width: screenWidth * 0.2, // 20% of screen width
+                  height: screenWidth * 0.2, // Square aspect ratio
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 3.0,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${_requiredTaps - _tapCount}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: screenWidth * 0.09, // 45% of container width
+                            fontWeight: FontWeight.bold,
+                            shadows: const [
+                              Shadow(
+                                blurRadius: 5,
+                                color: Colors.black,
+                                offset: Offset(2, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          'hits left',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: screenWidth * 0.025, // Smaller text for label
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

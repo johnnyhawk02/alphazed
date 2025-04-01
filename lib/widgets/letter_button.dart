@@ -99,8 +99,18 @@ class _LetterButtonState extends State<LetterButton> {
   Widget build(BuildContext context) {
     // Calculate the button's size based on screen width and configuration factor.
     // Doing this once here avoids recalculating it multiple times.
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double buttonSize = screenWidth * GameConfig.letterButtonSizeFactor;
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    
+    // Check if device is likely an iPad (using aspect ratio and size)
+    bool isIpad = mediaQuery.size.shortestSide >= 600 &&
+                  (screenWidth / screenHeight).abs() < 1.6;
+    
+    // Adjust size factor for iPad - make it 20% smaller
+    final sizeFactor = isIpad ? GameConfig.letterButtonSizeFactor * 0.8 : GameConfig.letterButtonSizeFactor;
+    
+    final buttonSize = screenWidth * sizeFactor;
 
     // --- Handle Dragged State ---
     // If the button was successfully dragged away previously, render an empty placeholder.
@@ -180,31 +190,33 @@ class _LetterButtonState extends State<LetterButton> {
           // Use IgnorePointer to prevent the overlay from blocking interactions
           // with the button underneath (though it's usually not interactable during feedback).
           IgnorePointer(
-            child: Container(
-              // Make the overlay container match the button's diameter.
+            child: SizedBox(
               width: buttonSize,
               height: buttonSize,
-              decoration: BoxDecoration(
-                // Style the overlay background (e.g., semi-transparent).
-                color: Colors.black.withOpacity(0.4),
-                shape: BoxShape.circle, // Match the button shape.
-              ),
-              // Center the emoji within the overlay.
-              child: Center(
-                child: Text(
-                  '😢', // The sad emoji character.
-                  style: TextStyle(
-                    // Scale the emoji size relative to the button size.
-                    fontSize: buttonSize * 0.75, // Adjust factor (e.g., 0.7, 0.75, 0.8) for best fit.
-                    decoration: TextDecoration.none, // Remove potential underlines.
-                    color: Colors.white, // Ensure visibility.
-                    // Optional: Add shadows for better contrast/visibility.
-                    shadows: const [
-                      Shadow(offset: Offset(-1, -1), color: Colors.black54),
-                      Shadow(offset: Offset(1, -1), color: Colors.black54),
-                      Shadow(offset: Offset(1, 1), color: Colors.black54),
-                      Shadow(offset: Offset(-1, 1), color: Colors.black54),
-                    ],
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.black38,
+                    shape: BoxShape.circle,
+                  ),
+                  // Center the emoji within the overlay.
+                  child: Center(
+                    child: Text(
+                      '😢', // The sad emoji character.
+                      style: TextStyle(
+                        fontSize: buttonSize * 0.75,
+                        decoration: TextDecoration.none,
+                        color: Colors.white,
+                        shadows: const [
+                          Shadow(offset: Offset(-1, -1), color: Colors.black54),
+                          Shadow(offset: Offset(1, -1), color: Colors.black54),
+                          Shadow(offset: Offset(1, 1), color: Colors.black54),
+                          Shadow(offset: Offset(-1, 1), color: Colors.black54),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -224,27 +236,39 @@ class _LetterButtonState extends State<LetterButton> {
     // Determine if the letter text itself should be visible (colored).
     final bool showLetterText = isForFeedback || widget.colored;
 
-    // Use Material for potential ripple effects if needed, with transparent background.
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(), // Ensures ripple effects (if any) are circular.
-      child: Container(
-        width: buttonSize,
-        height: buttonSize,
-        // Get the button's decoration (gradient, border, shadow) from GameConfig.
-        decoration: GameConfig.getLetterButtonDecoration(
-          context,
-          isActive: isButtonActive, // Pass active state for styling.
+    // Use a forced square layout with Material.shape to ensure circle shape
+    return SizedBox(
+      width: buttonSize,
+      height: buttonSize,
+      child: Material(
+        color: Colors.transparent,
+        // Force circular shape with ShapeBorder
+        shape: CircleBorder(
+          side: BorderSide(
+            color: isButtonActive 
+                ? Colors.white.withOpacity(0.8) 
+                : Colors.grey.withOpacity(0.4),
+            width: 2.0,
+          ),
         ),
-        // Center the letter text within the button.
-        child: Center(
-          child: Text(
-            widget.letter.toLowerCase(), // Display the letter (consistently lowercase).
-            // Style the text using GameConfig, overriding dynamic properties.
-            style: GameConfig.letterButtonTextStyle.copyWith(
-              fontSize: fontSize, // Apply calculated font size.
-              // Make text transparent if it shouldn't be shown.
-              color: showLetterText ? Colors.white : Colors.transparent,
+        // Apply the gradient as elevation overlay color
+        elevation: 4.0,
+        shadowColor: Colors.black54,
+        // Use Ink for gradient background that respects the CircleBorder shape
+        child: Ink(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: isButtonActive 
+                ? GameConfig.letterButtonGradient 
+                : GameConfig.inactiveButtonGradient,
+          ),
+          child: Center(
+            child: Text(
+              widget.letter.toLowerCase(),
+              style: GameConfig.letterButtonTextStyle.copyWith(
+                fontSize: fontSize,
+                color: showLetterText ? Colors.white : Colors.transparent,
+              ),
             ),
           ),
         ),
@@ -264,16 +288,29 @@ class _EmptyLetterCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Return a container with the specified size and inactive styling.
-    return Container(
+    // Match the same pattern as the main button using Material+Ink for better shape control
+    return SizedBox(
       width: buttonSize,
       height: buttonSize,
-      // Get the inactive button decoration from GameConfig.
-      decoration: GameConfig.getLetterButtonDecoration(
-        context,
-        isActive: false, // Explicitly use the inactive style.
+      child: Material(
+        color: Colors.transparent,
+        // Force circular shape with ShapeBorder
+        shape: CircleBorder(
+          side: BorderSide(
+            color: Colors.grey.withOpacity(0.4),
+            width: 2.0,
+          ),
+        ),
+        elevation: 2.0, // Reduced elevation for inactive state
+        shadowColor: Colors.black38,
+        // Use Ink for gradient that respects the CircleBorder shape
+        child: Ink(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: GameConfig.inactiveButtonGradient,
+          ),
+        ),
       ),
-      // No child needed, it's just an empty styled circle.
     );
   }
 }

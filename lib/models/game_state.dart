@@ -172,12 +172,31 @@ class GameState extends ChangeNotifier {
 
     int nextIndex = (currentIndex + 1) % gameItems.length;
 
-    // Optional: Could clear played status here if needed *before* showing,
-    // but current logic clears it in showPreparedImage which seems safer.
-    // _playedQuestions.remove(gameItems[nextIndex].word.toLowerCase());
+    // Validate the image path before returning it
+    final imagePath = gameItems[nextIndex].imagePath;
+    
+    try {
+      // Basic path validation
+      if (imagePath.isEmpty) {
+        print("WARNING: Empty image path detected for next item");
+        return null;
+      }
 
-    print("Preparing next image path: ${gameItems[nextIndex].imagePath}");
-    return gameItems[nextIndex].imagePath;
+      // Check if the imagePath has a valid extension
+      bool hasValidExtension = ['.png', '.jpg', '.jpeg', '.webp', '.gif']
+          .any((ext) => imagePath.toLowerCase().endsWith(ext));
+      
+      if (!hasValidExtension) {
+        print("WARNING: Image path doesn't have valid image extension: $imagePath");
+        return null;
+      }
+      
+      print("Preparing next image path: $imagePath");
+      return imagePath;
+    } catch (e) {
+      print("ERROR: Failed to validate next image path: $e");
+      return null;
+    }
   }
 
   // Method called AFTER an interaction (like Pinata) to display the next item

@@ -110,6 +110,30 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              print("Error loading image: ${widget.item.imagePath}\nError: $error");
+                              // Provide a fallback display when image can't be loaded
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.image_not_supported,
+                                          size: 60, color: Colors.grey.shade700),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        widget.item.word,
+                                        style: GameConfig.wordTextStyle.copyWith(
+                                          fontSize: 36,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),

@@ -40,14 +40,55 @@ class _RippleScreenState extends State<RippleScreen> with TickerProviderStateMix
   Timer? _completionTimer;
   bool _showNextButton = false;
 
+  // Track if sound is currently playing to prevent cutting it off
+  bool _isSoundPlaying = false;
+
   final List<Color> _psychedelicColors = [ Colors.pinkAccent, Colors.purpleAccent, Colors.cyanAccent, Colors.limeAccent, Colors.deepOrangeAccent, Colors.lightBlueAccent, Colors.greenAccent, Colors.redAccent, Colors.amberAccent, ];
-  final String _plopSoundPath = 'assets/audio/other/plop.mp3'; // Example path
+  final String _plopSoundPath = 'assets/audio/other/plop.mp3';
+  final String _waaarbSoundPath = 'assets/audio/other/waaaarb.mp3';
 
   @override
   void initState() {
     super.initState();
     _completionTimer = Timer(const Duration(seconds: 8), () { if (mounted) { setState(() { _showNextButton = true; }); } });
-    WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) { final size = MediaQuery.of(context).size; _addRipple(size.center(Offset.zero)); } });
+    WidgetsBinding.instance.addPostFrameCallback((_) { 
+      if (mounted) { 
+        // Play the waaaarb sound when the screen first loads
+        _playSoundWithoutCutting(_waaarbSoundPath);
+        
+        final size = MediaQuery.of(context).size;
+        _addRipple(size.center(Offset.zero));
+      }
+    });
+  }
+
+  // New method to play sounds without cutting them off
+  void _playSoundWithoutCutting(String soundPath) {
+    if (_isSoundPlaying) return;
+    
+    setState(() {
+      _isSoundPlaying = true;
+    });
+    
+    try {
+      widget.audioService.playShortSoundEffect(soundPath, stopPreviousEffect: false)
+        .then((_) {
+          // Reset flag when sound finishes playing
+          if (mounted) {
+            setState(() {
+              _isSoundPlaying = false;
+            });
+          }
+        });
+    } catch (e) {
+      print("Error playing sound ($soundPath): $e");
+      // Reset flag if there's an error
+      if (mounted) {
+        setState(() {
+          _isSoundPlaying = false;
+        });
+      }
+    }
   }
 
   @override
@@ -63,7 +104,10 @@ class _RippleScreenState extends State<RippleScreen> with TickerProviderStateMix
 
   void _handleTap(TapDownDetails details) {
     if (!mounted || _showNextButton) return;
-    try { widget.audioService.playShortSoundEffect(_plopSoundPath, stopPreviousEffect: false); } catch(e) { print("Error playing plop sound: $e"); }
+    
+    // Play the waaaarb sound when user taps, using the method that prevents cutting off
+    _playSoundWithoutCutting(_waaarbSoundPath);
+    
     _addRipple(details.localPosition);
   }
 

@@ -302,13 +302,59 @@ class _FireworksScreenState extends State<FireworksScreen>
 
   void _addShootingStar(Size size) {
       if (!mounted) return;
-      final bool fromTop = _random.nextBool(); final bool fromLeft = _random.nextBool(); double startX, startY, endX, endY; const margin = 50.0;
-      if (fromTop) { startY = -margin; endY = size.height * (_random.nextDouble() * 0.5 + 0.3); startX = _random.nextDouble() * size.width; endX = fromLeft ? startX - (size.width * 0.5 + _random.nextDouble() * size.width * 0.5) : startX + (size.width * 0.5 + _random.nextDouble() * size.width * 0.5); }
-      else { startY = size.height + margin; endY = size.height * (_random.nextDouble() * 0.5); startX = _random.nextDouble() * size.width; endX = fromLeft ? startX - (size.width * 0.5 + _random.nextDouble() * size.width * 0.5) : startX + (size.width * 0.5 + _random.nextDouble() * size.width * 0.5); }
-      if ((startX - endX).abs() < size.width * 0.3) { endX = fromLeft ? startX - size.width * 0.5 : startX + size.width * 0.5; }
+      
+      // Modify to focus on middle top area
+      // Start position is now always in the top middle section of the screen
+      final double startX = (size.width * 0.3) + (_random.nextDouble() * size.width * 0.4); // Between 30%-70% of screen width
+      final double startY = -50.0; // Just above the top of the screen
+      
+      // End position is diagonal from the start position
+      final bool goLeft = _random.nextBool(); // Randomly choose left or right direction
+      final double endX = goLeft 
+          ? startX - (size.width * (0.3 + _random.nextDouble() * 0.3)) // Go left 30%-60% of screen width
+          : startX + (size.width * (0.3 + _random.nextDouble() * 0.3)); // Go right 30%-60% of screen width
+      final double endY = size.height * (0.3 + _random.nextDouble() * 0.3); // End at 30%-60% of screen height
+      
       AnimationController? controller;
-      try { if (!mounted) return; controller = AnimationController( duration: Duration(milliseconds: 600 + _random.nextInt(600)), vsync: this, ); final star = _ShootingStar( id: DateTime.now().millisecondsSinceEpoch + _random.nextInt(1000), startPos: Offset(startX, startY), endPos: Offset(endX, endY), controller: controller, color: Colors.white.withOpacity(0.8), thickness: _random.nextDouble() * 1.5 + 1.0, onComplete: (id) { if (mounted) { setState(() { _shootingStars.removeWhere((s) => s.id == id); }); } }, ); if (mounted) { setState(() { _shootingStars.add(star); }); controller.forward(); } else { controller.dispose(); } }
-      catch (e) { print("Error creating/starting shooting star animation: $e"); controller?.dispose(); }
+      try { 
+        if (!mounted) return; 
+        controller = AnimationController(
+          duration: Duration(milliseconds: 600 + _random.nextInt(600)), 
+          vsync: this, 
+        );
+        
+        final star = _ShootingStar(
+          id: DateTime.now().millisecondsSinceEpoch + _random.nextInt(1000),
+          startPos: Offset(startX, startY),
+          endPos: Offset(endX, endY),
+          controller: controller,
+          color: Colors.white.withOpacity(0.8),
+          thickness: _random.nextDouble() * 1.5 + 1.0,
+          onComplete: (id) {
+            if (mounted) {
+              setState(() {
+                _shootingStars.removeWhere((s) => s.id == id);
+              });
+            }
+          },
+        );
+        
+        if (mounted) {
+          setState(() {
+            _shootingStars.add(star);
+          });
+          
+          // Play shooting star sound when adding a new one
+          widget.audioService.playShortSoundEffect('assets/audio/other/shooting_star.mp3', stopPreviousEffect: false);
+          
+          controller.forward();
+        } else {
+          controller.dispose();
+        }
+      } catch (e) {
+        print("Error creating/starting shooting star animation: $e");
+        controller?.dispose();
+      }
    }
 
   // --- Event Handlers & Burst Logic (Keep _handleTap, _playRandomFireworkSound, _addBurst as they are) ---

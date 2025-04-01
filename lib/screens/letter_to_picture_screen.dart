@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../config/game_config.dart';
 import '../models/game_state.dart'; // Uses the GameState WITHOUT GamePhase
 import '../services/audio_service.dart';
@@ -188,11 +189,40 @@ class _LetterPictureMatchState extends BaseGameScreenState<LetterPictureMatch> w
                         print("🚀 Preparing next image before Celebration...");
                         nextImagePath = await currentGameState.prepareNextImage();
                         if (nextImagePath != null && mounted) {
-                          precacheImage(AssetImage(nextImagePath), context).then((_) {
-                             print("🖼️ Precached image: $nextImagePath");
-                          }).catchError((e, s) {
-                             print("⚠️ Failed to precache image: $nextImagePath, Error: $e\n$s");
-                          });
+                          try {
+                            // Check if the file exists using resolveImage and wait for load
+                            final ImageConfiguration config = ImageConfiguration();
+                            final AssetImage image = AssetImage(nextImagePath);
+                            final ImageStream stream = image.resolve(config);
+                            
+                            Future<bool> testImage() {
+                              Completer<bool> completer = Completer<bool>();
+                              stream.addListener(ImageStreamListener(
+                                (ImageInfo info, bool _) {
+                                  completer.complete(true);
+                                },
+                                onError: (dynamic error, StackTrace? stackTrace) {
+                                  print("⚠️ Error testing image load: $nextImagePath\nError: $error");
+                                  completer.complete(false);
+                                },
+                              ));
+                              return completer.future;
+                            }
+                            
+                            bool imageOk = await testImage();
+                            
+                            if (imageOk && mounted) {
+                              precacheImage(AssetImage(nextImagePath), context).then((_) {
+                                print("🖼️ Precached image: $nextImagePath");
+                              }).catchError((e, s) {
+                                print("⚠️ Failed to precache image: $nextImagePath, Error: $e\n$s");
+                              });
+                            } else {
+                              print("⚠️ Skipping precache for invalid image: $nextImagePath");
+                            }
+                          } catch (e) {
+                            print("⚠️ Error validating image: $nextImagePath, Error: $e");
+                          }
                         }
                       } catch (e) {
                         print("💥 Error preparing next image: $e");
