@@ -18,6 +18,8 @@ const double _gravity = 60.0; // Slightly higher gravity
 const double _damping = 0.60; // A bit more energy loss
 const double _maxSpeed = 550.0; // Slightly slower max speed for easier tapping
 const double _initialUpwardBoost = -150.0; // Give them a little starting jump
+const double _collisionRestitution = 0.6; // How much energy is kept after monster-monster collision (0-1)
+const double _collisionRotationFactor = 0.05; // How much collisions affect rotation
 
 // --- Helper Class for Enhanced Monster State ---
 class _Monster {
@@ -244,7 +246,7 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
     final int countToCreate = math.min(images.length, _monsterCount);
 
     // Calculate target width based on screen size
-    final double targetMonsterWidth = screenSize.width / 5.0; // 1/5th of screen width
+    final double targetMonsterWidth = screenSize.width / 3.0; // 1/3rd of screen width
 
     for (int i = 0; i < countToCreate; i++) {
       final image = images[i];
@@ -317,6 +319,7 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
     if (dt <= 0) return;
     final Size screenSize = MediaQuery.of(context).size;
 
+    // 1. Apply forces and update position/rotation for each monster
     for (final monster in _monsters) {
       if (!monster.isPopped) { // Only apply physics to monsters that haven't been popped
           monster.velocity.y += _gravity * dt;
@@ -368,6 +371,55 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
 
       }
       // No physics update if monster.isPopped
+    }
+
+    // 2. Monster-to-Monster Collision Detection and Response
+    for (int i = 0; i < _monsters.length; i++) {
+      final monsterA = _monsters[i];
+      if (monsterA.isPopped || monsterA.isGone) continue;
+
+      for (int j = i + 1; j < _monsters.length; j++) {
+        final monsterB = _monsters[j];
+        if (monsterB.isPopped || monsterB.isGone) continue;
+
+        final Vector2 diff = monsterB.position - monsterA.position;
+        final double distance = diff.length;
+        // Use average width as radius, maybe slightly smaller for better feel
+        final double radiusA = monsterA.size.width * 0.4;
+        final double radiusB = monsterB.size.width * 0.4;
+        final double minDistance = radiusA + radiusB;
+
+        if (distance < minDistance && distance > 0.01) { // Collision detected (and not exactly same spot)
+          // Resolve Overlap
+          final Vector2 normal = diff.normalized();
+          final double overlap = minDistance - distance;
+          // Move them apart slightly (can be improved with mass consideration)
+          monsterA.position -= normal * (overlap / 2.0);
+          monsterB.position += normal * (overlap / 2.0);
+
+          // Collision Response (Simplified Elastic Collision)
+          final Vector2 relativeVelocity = monsterB.velocity - monsterA.velocity;
+          final double velocityAlongNormal = relativeVelocity.dot(normal);
+
+          // Only apply response if they are moving towards each other
+          if (velocityAlongNormal < 0) {
+            final double impulseMagnitude = -(1 + _collisionRestitution) * velocityAlongNormal;
+            // Assuming equal mass for simplicity
+            final Vector2 impulse = normal * (impulseMagnitude / 2.0);
+
+            monsterA.velocity -= impulse;
+            monsterB.velocity += impulse;
+
+            // Add some rotation based on collision
+            // Simplified: Add a small random spin or based on tangential component
+            final Vector2 tangent = Vector2(-normal.y, normal.x);
+            final double tangentialVelA = monsterA.velocity.dot(tangent);
+            final double tangentialVelB = monsterB.velocity.dot(tangent);
+            monsterA.rotationVelocity += (tangentialVelB - tangentialVelA) * _collisionRotationFactor * (_random.nextDouble() - 0.5);
+            monsterB.rotationVelocity -= (tangentialVelA - tangentialVelB) * _collisionRotationFactor * (_random.nextDouble() - 0.5);
+          }
+        }
+      }
     }
   }
 
