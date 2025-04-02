@@ -14,12 +14,13 @@ const int _monsterCount = 6; // Number of monsters to pop
 // Monster size is now relative to screen width, so these are less critical
 // const double _minMonsterSize = 70.0;
 // const double _maxMonsterSize = 110.0;
-const double _gravity = 60.0; // Slightly higher gravity
-const double _damping = 0.60; // A bit more energy loss
-const double _maxSpeed = 550.0; // Slightly slower max speed for easier tapping
-const double _initialUpwardBoost = -150.0; // Give them a little starting jump
-const double _collisionRestitution = 0.6; // How much energy is kept after monster-monster collision (0-1)
-const double _collisionRotationFactor = 0.05; // How much collisions affect rotation
+const double _gravity = 10.0; // Very low gravity (reduced from 60.0)
+const double _damping = 0.65; // Slightly increased damping for better float effect
+const double _maxSpeed = 550.0; // Kept the same max speed
+const double _initialUpwardBoost = -80.0; // Reduced initial boost for softer launch
+const double _collisionRestitution = 0.85; // Higher restitution for bouncier collisions
+const double _collisionRotationFactor = 0.15; // Kept the same rotation factor
+const double _initialRotationRange = 0.5; // Kept the same initial rotation range
 
 // --- Helper Class for Enhanced Monster State ---
 class _Monster {
@@ -171,12 +172,20 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
   int _poppedCount = 0; // Track popped monsters
   int _goneCount = 0; // Track monsters that finished flying off
 
+  // Drag state tracking
+  _Monster? _draggedMonster;
+  Offset? _dragStartPosition;
+  Vector2? _initialMonsterPosition;
+  DateTime _dragStartTime = DateTime.now();
+  List<_DragSample> _dragSamples = [];
+  bool _isDragging = false;
+
   late AnimationController _loopController;
   DateTime _lastUpdateTime = DateTime.now();
 
   ui.Image? _backgroundImage;
-  final String _backgroundPath = 'assets/images/pinata/pinata_courtyard.png'; // Friendlier background?
-  final String _popSoundPath = 'assets/audio/other/plop.mp3'; // Placeholder - find a good "pop" or "squish"
+  final String _backgroundPath = 'assets/images/pinata/monster_mash_background.png'; // Updated to the new background
+  final String _popSoundPath = 'assets/audio/other/knock.mp3'; // Changed from plop.mp3 to knock.mp3
 
   @override
   void initState() {
@@ -272,8 +281,8 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
           _random.nextDouble() * 100 - 50, // Less X velocity initially
           _initialUpwardBoost + _random.nextDouble() * 50 // Y boost
         ),
-        rotation: _random.nextDouble() * math.pi * 0.2 - 0.1, // Less rotation
-        rotationVelocity: _random.nextDouble() * 0.5 - 0.25, // Slower spin
+        rotation: _random.nextDouble() * _initialRotationRange - _initialRotationRange/2, // Initial rotation based on constant
+        rotationVelocity: _random.nextDouble() * 0.8 - 0.4, // More initial spin for fun
         vsync: this,
         onGone: () {
             _handleMonsterGone(); // Pass the callback
@@ -328,6 +337,10 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
           monster.velocity.scale(dragFactor);
           monster.rotationVelocity *= math.pow(0.97, dt*60).toDouble(); // Rotational drag
 
+          // Make rotation related to movement for more natural spinning
+          // Add a slight spin based on horizontal movement (more realistic physics)
+          monster.rotationVelocity += monster.velocity.x * dt * 0.0005;
+
           if (monster.velocity.length > _maxSpeed) {
               monster.velocity.normalize();
               monster.velocity.scale(_maxSpeed);
@@ -341,20 +354,36 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
           bool hitWall = false;
           bool hitFloor = false;
 
-          if (monster.position.x <= halfW) { monster.position.x = halfW; monster.velocity.x *= -_damping; hitWall = true; }
-          else if (monster.position.x >= screenSize.width - halfW) { monster.position.x = screenSize.width - halfW; monster.velocity.x *= -_damping; hitWall = true;}
-
-          if (hitWall) {
-              monster.rotationVelocity *= -_damping * 0.5; // Weaker rotation bounce on side walls
+          if (monster.position.x <= halfW) { 
+              monster.position.x = halfW; 
+              monster.velocity.x *= -_damping; 
+              // Add counter-rotation when hitting left wall
+              monster.rotationVelocity -= monster.velocity.y * 0.0008;
+              hitWall = true; 
+          }
+          else if (monster.position.x >= screenSize.width - halfW) { 
+              monster.position.x = screenSize.width - halfW; 
+              monster.velocity.x *= -_damping; 
+              // Add rotation when hitting right wall
+              monster.rotationVelocity += monster.velocity.y * 0.0008;
+              hitWall = true;
           }
 
-          // Allow bouncing slightly above floor before full stop?
+          if (hitWall) {
+              // Apply stronger rotation effect on wall hits
+              monster.rotationVelocity *= -_damping * 0.7;
+          }
+
+          // Allow bouncing slightly above floor before full stop
           double floorLevel = screenSize.height - halfH;
           if (monster.position.y >= floorLevel) {
             monster.position.y = floorLevel;
              // Dampen vertical velocity significantly on floor hit
              if (monster.velocity.y > 0) { // Only apply damping if moving downwards
                  monster.velocity.y *= -_damping * 0.8; // Stronger Y damping on floor
+                 
+                 // Add some rotation based on horizontal speed when hitting the floor
+                 monster.rotationVelocity += monster.velocity.x * 0.002;
              }
              // Apply friction to horizontal movement and rotation on floor
              monster.velocity.x *= 0.95;
@@ -367,7 +396,14 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
              }
           }
            // Top boundary (less critical, mainly prevents escaping)
-           else if (monster.position.y < halfH) { monster.position.y = halfH; if(monster.velocity.y < 0) monster.velocity.y *= -_damping; }
+           else if (monster.position.y < halfH) { 
+               monster.position.y = halfH; 
+               if(monster.velocity.y < 0) {
+                   monster.velocity.y *= -_damping;
+                   // Add some rotation when hitting the ceiling
+                   monster.rotationVelocity -= monster.velocity.x * 0.001;
+               }
+           }
 
       }
       // No physics update if monster.isPopped
@@ -406,21 +442,149 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
             final double impulseMagnitude = -(1 + _collisionRestitution) * velocityAlongNormal;
             // Assuming equal mass for simplicity
             final Vector2 impulse = normal * (impulseMagnitude / 2.0);
+            
+            // Store original velocities to calculate rotation effect
+            final Vector2 origVelA = monsterA.velocity.clone();
+            final Vector2 origVelB = monsterB.velocity.clone();
 
             monsterA.velocity -= impulse;
             monsterB.velocity += impulse;
 
             // Add some rotation based on collision
-            // Simplified: Add a small random spin or based on tangential component
+            // Get the tangent vector perpendicular to the collision normal
             final Vector2 tangent = Vector2(-normal.y, normal.x);
+            
+            // Calculate how much the collision affects rotation based on:
+            // 1. How much velocity changed (stronger collision = more spin)
+            final double velChangeA = (monsterA.velocity - origVelA).length;
+            final double velChangeB = (monsterB.velocity - origVelB).length;
+            
+            // 2. The tangential component (side hits cause more spin than head-on)
             final double tangentialVelA = monsterA.velocity.dot(tangent);
             final double tangentialVelB = monsterB.velocity.dot(tangent);
-            monsterA.rotationVelocity += (tangentialVelB - tangentialVelA) * _collisionRotationFactor * (_random.nextDouble() - 0.5);
-            monsterB.rotationVelocity -= (tangentialVelA - tangentialVelB) * _collisionRotationFactor * (_random.nextDouble() - 0.5);
+            
+            // Apply rotation changes - combine speed change and tangential effects
+            final double spinFactorA = velChangeA * _collisionRotationFactor * (0.8 + 0.4 * _random.nextDouble());
+            final double spinFactorB = velChangeB * _collisionRotationFactor * (0.8 + 0.4 * _random.nextDouble());
+            
+            monsterA.rotationVelocity += tangentialVelB * spinFactorA * tangent.x.sign;
+            monsterB.rotationVelocity -= tangentialVelA * spinFactorB * tangent.x.sign;
+            
+            // Add a small random component to make collisions more varied
+            monsterA.rotationVelocity += (_random.nextDouble() - 0.5) * spinFactorA;
+            monsterB.rotationVelocity += (_random.nextDouble() - 0.5) * spinFactorB;
           }
         }
       }
     }
+  }
+
+  // Drag handling methods
+  void _handleDragStart(DragStartDetails details) {
+    if (_isLoading || _monsters.isEmpty || _showNextButton) return;
+
+    // Find the monster under the touch point
+    final touchPosition = details.localPosition;
+    for (int i = _monsters.length - 1; i >= 0; i--) {
+      final monster = _monsters[i];
+      if (monster.contains(touchPosition) && !monster.isPopped && !monster.isGone) {
+        _draggedMonster = monster;
+        _dragStartPosition = touchPosition;
+        _initialMonsterPosition = monster.position.clone();
+        _dragStartTime = DateTime.now();
+        _dragSamples.clear();
+        _isDragging = true;
+        
+        // Add the initial sample
+        _dragSamples.add(_DragSample(touchPosition, _dragStartTime));
+        break;
+      }
+    }
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    if (_draggedMonster == null || !_isDragging) return;
+    
+    // Update monster position based on drag delta
+    final currentPosition = details.localPosition;
+    final delta = Offset(
+      currentPosition.dx - _dragStartPosition!.dx,
+      currentPosition.dy - _dragStartPosition!.dy
+    );
+    
+    // Update the monster's position
+    _draggedMonster!.position = Vector2(
+      _initialMonsterPosition!.x + delta.dx,
+      _initialMonsterPosition!.y + delta.dy
+    );
+    
+    // Record drag sample for velocity calculation (keep only recent samples)
+    final now = DateTime.now();
+    _dragSamples.add(_DragSample(currentPosition, now));
+    
+    // Maintain a history of the last 5 samples for smooth velocity calculation
+    if (_dragSamples.length > 5) {
+      _dragSamples.removeAt(0);
+    }
+    
+    // Add rotation based on horizontal movement (makes dragging feel more interactive)
+    final dx = delta.dx;
+    _draggedMonster!.rotationVelocity = dx * 0.001;
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_draggedMonster == null || !_isDragging) return;
+    
+    // Calculate velocity from recent samples
+    Vector2 velocity = _calculateDragVelocity();
+    
+    // Apply drag velocity to the monster (with a boost factor to make it feel more satisfying)
+    final boostFactor = 0.8;
+    _draggedMonster!.velocity = velocity.scaled(boostFactor);
+    
+    // Cap maximum velocity
+    if (_draggedMonster!.velocity.length > _maxSpeed) {
+      _draggedMonster!.velocity.normalize();
+      _draggedMonster!.velocity.scale(_maxSpeed);
+    }
+    
+    // Add spin based on throw direction and speed
+    final double spinFactor = velocity.length * 0.0003;
+    _draggedMonster!.rotationVelocity = velocity.x * spinFactor;
+    
+    // Clean up drag state
+    _draggedMonster = null;
+    _dragStartPosition = null;
+    _initialMonsterPosition = null;
+    _dragSamples.clear();
+    _isDragging = false;
+  }
+
+  // Helper to calculate velocity based on drag samples
+  Vector2 _calculateDragVelocity() {
+    if (_dragSamples.length < 2) {
+      return Vector2(0, 0);
+    }
+    
+    // Use the most recent samples for more accuracy
+    final lastSample = _dragSamples.last;
+    final previousSample = _dragSamples[_dragSamples.length - 2];
+    
+    // Calculate position delta
+    final dx = lastSample.position.dx - previousSample.position.dx;
+    final dy = lastSample.position.dy - previousSample.position.dy;
+    
+    // Calculate time delta in seconds
+    final timeDeltaMs = lastSample.timestamp.difference(previousSample.timestamp).inMilliseconds;
+    final timeDeltaSec = timeDeltaMs / 1000.0;
+    
+    // Avoid division by zero and very small time deltas
+    if (timeDeltaSec < 0.001) {
+      return Vector2(0, 0);
+    }
+    
+    // Calculate velocity (pixels per second)
+    return Vector2(dx / timeDeltaSec, dy / timeDeltaSec);
   }
 
   void _handleTap(TapDownDetails details) {
@@ -454,7 +618,10 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
       backgroundColor: Colors.black, // Fallback background
       body: GestureDetector(
         onTapDown: _handleTap,
-        behavior: HitTestBehavior.opaque, // Capture taps anywhere on the Stack
+        onPanStart: _handleDragStart,
+        onPanUpdate: _handleDragUpdate,
+        onPanEnd: _handleDragEnd,
+        behavior: HitTestBehavior.opaque, // Capture gestures anywhere on the Stack
         child: Stack(
           children: [
             // Background Layer
@@ -659,4 +826,12 @@ class _BackgroundPainter extends CustomPainter {
   bool shouldRepaint(covariant _BackgroundPainter oldDelegate) {
     return backgroundImage != oldDelegate.backgroundImage; // Only repaint if image changes
   }
+}
+
+// --- Drag sample for velocity tracking ---
+class _DragSample {
+  final Offset position;
+  final DateTime timestamp;
+
+  _DragSample(this.position, this.timestamp);
 }
