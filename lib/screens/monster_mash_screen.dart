@@ -15,12 +15,13 @@ const int _monsterCount = 6; // Number of monsters to pop
 // const double _minMonsterSize = 70.0;
 // const double _maxMonsterSize = 110.0;
 const double _gravity = 10.0; // Very low gravity (reduced from 60.0)
-const double _damping = 0.65; // Slightly increased damping for better float effect
-const double _maxSpeed = 550.0; // Kept the same max speed
-const double _initialUpwardBoost = -80.0; // Reduced initial boost for softer launch
-const double _collisionRestitution = 0.85; // Higher restitution for bouncier collisions
-const double _collisionRotationFactor = 0.15; // Kept the same rotation factor
+const double _damping = 0.75; // Increased damping for better energy preservation
+const double _maxSpeed = 700.0; // Increased max speed (from 550.0)
+const double _initialUpwardBoost = -80.0; // Kept the same boost
+const double _collisionRestitution = 0.95; // Very bouncy collisions
+const double _collisionRotationFactor = 0.2; // Good rotation factor
 const double _initialRotationRange = 0.5; // Kept the same initial rotation range
+const double _collisionSoundThreshold = 80.0; // Velocity threshold for playing collision sound
 
 // --- Helper Class for Enhanced Monster State ---
 class _Monster {
@@ -266,23 +267,30 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
       final double monsterHeight = (targetMonsterWidth / aspectRatio).clamp(1.0, screenSize.height); // Ensure height > 0
       final Size monsterSize = Size(targetMonsterWidth, monsterHeight);
 
-      // Ensure initial position is within bounds, considering the new fixed width
-      // Clamp initial values just in case calculation yields negative or out-of-bounds results
+      // Randomize starting position more broadly across the screen
       final initialX = (monsterSize.width / 2 + _random.nextDouble() * (screenSize.width - monsterSize.width)).clamp(monsterSize.width/2, screenSize.width - monsterSize.width/2);
-      // Start higher up, ensure valid Y pos
-      final initialY = (monsterSize.height / 2 + _random.nextDouble() * (screenSize.height * 0.66 - monsterSize.height)).clamp(monsterSize.height/2, screenSize.height * 0.75); // Adjust clamp as needed
+      // Position monsters across different heights of the screen
+      final initialY = (monsterSize.height / 2 + _random.nextDouble() * (screenSize.height * 0.75 - monsterSize.height)).clamp(monsterSize.height/2, screenSize.height * 0.8);
+      
+      // Create more diverse initial velocities
+      // Generate random angle for direction (in radians)
+      final double angle = _random.nextDouble() * 2 * math.pi;
+      
+      // Generate random speed between 150-350 pixels per second (increased from 80-250)
+      final double speed = 150.0 + _random.nextDouble() * 200.0;
+      
+      // Calculate velocity components from angle and speed
+      final double vx = math.cos(angle) * speed;
+      final double vy = math.sin(angle) * speed;
 
       _monsters.add(_Monster(
         id: i,
         image: image,
         size: monsterSize, // Use the calculated size
         position: Vector2(initialX, initialY),
-        velocity: Vector2(
-          _random.nextDouble() * 100 - 50, // Less X velocity initially
-          _initialUpwardBoost + _random.nextDouble() * 50 // Y boost
-        ),
-        rotation: _random.nextDouble() * _initialRotationRange - _initialRotationRange/2, // Initial rotation based on constant
-        rotationVelocity: _random.nextDouble() * 0.8 - 0.4, // More initial spin for fun
+        velocity: Vector2(vx, vy), // Use angle-based velocity components
+        rotation: _random.nextDouble() * math.pi * 2, // Full 360-degree random rotation
+        rotationVelocity: (_random.nextDouble() * 2.0 - 1.0), // Higher rotation speeds (-1.0 to 1.0)
         vsync: this,
         onGone: () {
             _handleMonsterGone(); // Pass the callback
@@ -420,18 +428,19 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
 
         final Vector2 diff = monsterB.position - monsterA.position;
         final double distance = diff.length;
-        // Use average width as radius, maybe slightly smaller for better feel
-        final double radiusA = monsterA.size.width * 0.4;
-        final double radiusB = monsterB.size.width * 0.4;
+        // Increased collision radius for more frequent interactions
+        final double radiusA = monsterA.size.width * 0.45;
+        final double radiusB = monsterB.size.width * 0.45;
         final double minDistance = radiusA + radiusB;
 
         if (distance < minDistance && distance > 0.01) { // Collision detected (and not exactly same spot)
-          // Resolve Overlap
+          // Resolve Overlap - Push them apart more aggressively
           final Vector2 normal = diff.normalized();
           final double overlap = minDistance - distance;
-          // Move them apart slightly (can be improved with mass consideration)
-          monsterA.position -= normal * (overlap / 2.0);
-          monsterB.position += normal * (overlap / 2.0);
+          // Move them apart with a bit of extra push for more dramatic separation
+          final double separationFactor = 0.6;
+          monsterA.position -= normal * (overlap * separationFactor);
+          monsterB.position += normal * (overlap * separationFactor);
 
           // Collision Response (Simplified Elastic Collision)
           final Vector2 relativeVelocity = monsterB.velocity - monsterA.velocity;
@@ -440,39 +449,48 @@ class _MonsterMashScreenState extends State<MonsterMashScreen>
           // Only apply response if they are moving towards each other
           if (velocityAlongNormal < 0) {
             final double impulseMagnitude = -(1 + _collisionRestitution) * velocityAlongNormal;
-            // Assuming equal mass for simplicity
-            final Vector2 impulse = normal * (impulseMagnitude / 2.0);
+            
+            // Add extra bounce factor for more dramatic collisions
+            final double bounceFactor = 1.2; // Exaggerate the bounce
             
             // Store original velocities to calculate rotation effect
             final Vector2 origVelA = monsterA.velocity.clone();
             final Vector2 origVelB = monsterB.velocity.clone();
 
+            // Apply impulse with bounce boost
+            final Vector2 impulse = normal * (impulseMagnitude * bounceFactor / 2.0);
             monsterA.velocity -= impulse;
             monsterB.velocity += impulse;
+            
+            // Calculate collision intensity for sound effect
+            final double collisionIntensity = relativeVelocity.length;
+            
+            // Play collision sound if it's a significant collision
+            if (collisionIntensity > _collisionSoundThreshold && mounted) {
+              widget.audioService.playShortSoundEffect(_popSoundPath, stopPreviousEffect: false);
+            }
 
-            // Add some rotation based on collision
-            // Get the tangent vector perpendicular to the collision normal
+            // Enhanced rotation effect based on collision
             final Vector2 tangent = Vector2(-normal.y, normal.x);
             
-            // Calculate how much the collision affects rotation based on:
-            // 1. How much velocity changed (stronger collision = more spin)
+            // Calculate collision impact values
             final double velChangeA = (monsterA.velocity - origVelA).length;
             final double velChangeB = (monsterB.velocity - origVelB).length;
-            
-            // 2. The tangential component (side hits cause more spin than head-on)
             final double tangentialVelA = monsterA.velocity.dot(tangent);
             final double tangentialVelB = monsterB.velocity.dot(tangent);
             
-            // Apply rotation changes - combine speed change and tangential effects
-            final double spinFactorA = velChangeA * _collisionRotationFactor * (0.8 + 0.4 * _random.nextDouble());
-            final double spinFactorB = velChangeB * _collisionRotationFactor * (0.8 + 0.4 * _random.nextDouble());
+            // Apply more dramatic rotation based on collision angle and force
+            // Vary the spin factor more for unpredictability
+            final double spinFactorA = velChangeA * _collisionRotationFactor * (0.9 + 0.5 * _random.nextDouble());
+            final double spinFactorB = velChangeB * _collisionRotationFactor * (0.9 + 0.5 * _random.nextDouble());
             
-            monsterA.rotationVelocity += tangentialVelB * spinFactorA * tangent.x.sign;
-            monsterB.rotationVelocity -= tangentialVelA * spinFactorB * tangent.x.sign;
+            // Apply stronger rotational impulses
+            monsterA.rotationVelocity += tangentialVelB * spinFactorA * tangent.x.sign * 1.25;
+            monsterB.rotationVelocity -= tangentialVelA * spinFactorB * tangent.x.sign * 1.25;
             
-            // Add a small random component to make collisions more varied
-            monsterA.rotationVelocity += (_random.nextDouble() - 0.5) * spinFactorA;
-            monsterB.rotationVelocity += (_random.nextDouble() - 0.5) * spinFactorB;
+            // Add random component for more chaotic spins
+            monsterA.rotationVelocity += (_random.nextDouble() - 0.5) * spinFactorA * 1.5;
+            monsterB.rotationVelocity += (_random.nextDouble() - 0.5) * spinFactorB * 1.5;
           }
         }
       }
