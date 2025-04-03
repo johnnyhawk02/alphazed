@@ -4,6 +4,7 @@ import '../models/game_item.dart';
 import '../config/game_config.dart';
 import '../services/audio_service.dart';
 import '../services/theme_provider.dart';
+import '../widgets/animation_overlay.dart'; // Import the animation overlay widget
 
 class ImageDropTarget extends StatefulWidget {
   final GameItem item;
@@ -24,6 +25,7 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
   static const double _borderRadius = 0.0;
   
   bool isHovering = false;
+  bool _showCorrectAnimation = false; // New state for showing the celebration animation
   
   // Get AudioService from the widget tree instead of creating a new instance
   AudioService? _getAudioService() {
@@ -75,7 +77,7 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
         // Main stack: DragTarget first, Confetti on top
         return Center(
           child: Stack(
-            clipBehavior: Clip.none,
+            clipBehavior: Clip.none, // Allow character animation to extend outside bounds
             children: [
               // DragTarget containing the image/letter/word display
               DragTarget<String>(
@@ -92,11 +94,23 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
                   // Check if the dropped letter is correct
                   final isCorrect = data.data.toLowerCase() == widget.item.firstLetter.toLowerCase();
                   
-                  // Flash red for incorrect, green for correct
-                  if (isCorrect) {
-                    context.read<ThemeProvider>().flashCorrect();
-                  } else {
+                  // Only flash red for incorrect answers (no flash for correct answers)
+                  if (!isCorrect) {
                     context.read<ThemeProvider>().flashIncorrect();
+                  } else {
+                    // Show celebration animation for correct answers
+                    setState(() {
+                      _showCorrectAnimation = true;
+                    });
+
+                    // Hide the animation after a delay
+                    Future.delayed(const Duration(milliseconds: 2000), () {
+                      if (mounted) {
+                        setState(() {
+                          _showCorrectAnimation = false;
+                        });
+                      }
+                    });
                   }
                   
                   // We don't set correctLetter anymore, even for correct answers
@@ -152,6 +166,14 @@ class _ImageDropTargetState extends State<ImageDropTarget> with TickerProviderSt
                         
                         // Hover indicator
                         if (isHovering) Positioned.fill(child: _buildHoverIndicator()),
+                        
+                        // Success animation overlay - positioned higher up on the image
+                        if (_showCorrectAnimation)
+                          AnimatedCharacter(
+                            animationPath: 'assets/animations/correct.json',
+                            size: targetWidth * 0.7, // Size relative to image
+                            positionOffset: Offset(0, -containerHeight * 0.2), // Position it above the center of the image
+                          ),
                       ],
                     ),
                   );

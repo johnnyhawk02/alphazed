@@ -276,61 +276,64 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                       ),
                     ),
                     
-                    Expanded(
-                      child: Center(
-                        child: _showWelcomeMessage 
-                            ? Column(
+                    const SizedBox(height: 30), // Added spacing
+                    
+                    // Lottie animation and loading progress
+                    _showWelcomeMessage 
+                        ? Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Tap anywhere to start!',
+                                  style: GameConfig.titleTextStyle.copyWith(fontSize: 24),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 20),
+                                Icon(
+                                  Icons.touch_app,
+                                  size: 60,
+                                  color: GameConfig.primaryButtonColor,
+                                )
+                              ],
+                            ),
+                          )
+                        : (_assetsLoaded
+                            ? Lottie.asset(
+                                'assets/animations/correct.json',
+                                width: 100,
+                                height: 100,
+                                repeat: false,
+                              )
+                            : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    'Tap anywhere to start!',
-                                    style: GameConfig.titleTextStyle.copyWith(fontSize: 24),
-                                    textAlign: TextAlign.center,
+                                  // Loading indicator
+                                  SizedBox(
+                                    width: screenSize.width * 0.6,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: LinearProgressIndicator(
+                                        value: _loadingProgress,
+                                        backgroundColor: Colors.grey.shade200,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          GameConfig.primaryButtonColor,
+                                        ),
+                                        minHeight: 10,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(height: 20),
-                                  Icon(
-                                    Icons.touch_app,
-                                    size: 60,
-                                    color: GameConfig.primaryButtonColor,
-                                  )
+                                  Text(
+                                    'Loading ${(_loadingProgress * 100).toInt()}%',
+                                    style: GameConfig.bodyTextStyle.copyWith(
+                                      color: GameConfig.textColor.withAlpha((0.7 * 255).toInt()),
+                                    ),
+                                  ),
                                 ],
-                              )
-                            : (_assetsLoaded
-                                ? Lottie.asset(
-                                    'assets/animations/correct.json',
-                                    width: 100,
-                                    height: 100,
-                                    repeat: false,
-                                  )
-                                : Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      // Loading indicator
-                                      SizedBox(
-                                        width: screenSize.width * 0.6,
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(10),
-                                          child: LinearProgressIndicator(
-                                            value: _loadingProgress,
-                                            backgroundColor: Colors.grey.shade200,
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              GameConfig.primaryButtonColor,
-                                            ),
-                                            minHeight: 10,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Text(
-                                        'Loading ${(_loadingProgress * 100).toInt()}%',
-                                        style: GameConfig.bodyTextStyle.copyWith(
-                                          color: GameConfig.textColor.withAlpha((0.7 * 255).toInt()),
-                                        ),
-                                      ),
-                                    ],
-                                  )),
-                      ),
-                    ),
+                              )),
+                    
+                    Expanded(child: Container()), // Spacer to push text to the bottom
                     
                     Container(
                       padding: const EdgeInsets.all(20),

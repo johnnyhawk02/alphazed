@@ -210,7 +210,7 @@ class _PinataScreenState extends State<PinataScreen> {
                         border: Border.all(color: Colors.white.withAlpha((0.8 * 255).toInt()), width: 2) // Optional border
                       ),
                       child: const Text(
-                        'NEXT WORD', // Using uppercase for button convention
+                        'next word', // Using lowercase for consistent styling
                         style: TextStyle(
                           fontSize: 36, // Slightly smaller font size
                           fontWeight: FontWeight.bold,

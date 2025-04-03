@@ -169,7 +169,7 @@ class _RippleScreenState extends State<RippleScreen> with TickerProviderStateMix
                         width: 2
                       )
                     ),
-                    child: const Text( 'NEXT WORD', style: TextStyle( fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5, shadows: [ Shadow( offset: Offset(1.0, 1.0), blurRadius: 2.0, color: Colors.black45, ), ] ), ),
+                    child: const Text( 'next word', style: TextStyle( fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5, shadows: [ Shadow( offset: Offset(1.0, 1.0), blurRadius: 2.0, color: Colors.black45, ), ] ), ),
                   ), ), ),
               ),
 

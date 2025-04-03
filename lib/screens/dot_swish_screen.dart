@@ -382,7 +382,7 @@ class _DotSwishScreenState extends State<DotSwishScreen>
                     child: Container( /* ... Same Button Style ... */
                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                        decoration: BoxDecoration( color: Colors.teal.shade400, borderRadius: BorderRadius.circular(30), boxShadow: [ BoxShadow(color: Colors.black.withOpacity(0.4), spreadRadius: 1, blurRadius: 8, offset: const Offset(0, 4), ),], border: Border.all( color: Colors.white.withOpacity(0.6), width: 1.5)),
-                       child: const Text( 'NEXT WORD', style: TextStyle( fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.2, shadows: [ Shadow(offset: Offset(1.0, 1.0), blurRadius: 1.0, color: Colors.black38,),]),),
+                       child: const Text( 'next word', style: TextStyle( fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.2, shadows: [ Shadow(offset: Offset(1.0, 1.0), blurRadius: 1.0, color: Colors.black38,),]),),
                     ),
                   ),
                 ),
